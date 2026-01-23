@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Inventory</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; padding: 20px; background: #f0f2f5; }
+        .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .qty { font-weight: bold; font-size: 1.2em; color: #007bff; display: flex; align-items: center; gap: 10px; }
+        input, button { padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin: 5px 0; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        .sync-btn { background: #28a745; width: 100%; margin-top: 20px; }
+        .refresh-btn { background: #6c757d; width: 100%; margin-top: 10px; }
+        .del-btn { background: #dc3545; padding: 5px 10px; font-size: 0.8em; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <h3>Inventory Tracker</h3>
+
+    <div id="setup" style="display:block; background: white; padding: 15px; border-radius: 10px;">
+        <p><small>Enter your GitHub Token to start syncing</small></p>
+        <input type="password" id="ghToken" placeholder="GitHub Token">
+        <input type="text" id="ghRepo" placeholder="username/repo-name">
+        <button onclick="saveConfig()">Connect</button>
+    </div>
+
+    <div id="app" style="display:none">
+        <input type="text" id="name" placeholder="Item Name">
+        <input type="number" id="qty" placeholder="Qty">
+        <button onclick="addItem()">Add Item</button>
+        <hr>
+        <div id="list">Loading...</div>
+        
+        <button class="refresh-btn" onclick="fetchData()">🔄 Refresh List</button>
+        <button class="sync-btn" onclick="syncToCloud()">☁️ Sync to All Devices</button>
+    </div>
+
+    <script>
+        let inventory = [];
+        let config = JSON.parse(localStorage.getItem('inv_config'));
+
+        if (config) {
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            fetchData();
+        }
+
+        function saveConfig() {
+            const token = document.getElementById('ghToken').value.trim();
+            const repo = document.getElementById('ghRepo').value.trim();
+            if (token && repo) {
+                localStorage.setItem('inv_config', JSON.stringify({token, repo}));
+                location.reload();
+            }
+        }
+
+        async function fetchData() {
+            const listDiv = document.getElementById('list');
+            const originalText = "🔄 Refresh List";
+            listDiv.innerHTML = "Fetching latest data...";
+            
+            try {
+                // cache-busting timestamp added to URL (?t=...)
+                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                    headers: { 'Authorization': `token ${config.token}` }
+                });
+                const file = await res.json();
+                inventory = JSON.parse(atob(file.content));
+                render();
+            } catch (err) {
+                listDiv.innerHTML = "⚠️ Error. Make sure data.json exists in repo.";
+                console.error(err);
+            }
+        }
+
+        async function syncToCloud() {
+            const btn = document.querySelector('.sync-btn');
+            const oldText = btn.innerText;
+            btn.innerText = "Saving...";
+            btn.disabled = true;
+
+            try {
+                const getRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+                    headers: { 'Authorization': `token ${config.token}` }
+                });
+                const file = await getRes.json();
+
+                await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${config.token}` },
+                    body: JSON.stringify({
+                        message: "update inventory",
+                        content: btoa(JSON.stringify(inventory)),
+                        sha: file.sha
+                    })
+                });
+                alert("Synced to Cloud!");
+            } catch (err) {
+                alert("Sync failed. Check connection.");
+            } finally {
+                btn.innerText = oldText;
+                btn.disabled = false;
+            }
+        }
+
+        function render() {
+            const listDiv = document.getElementById('list');
+            if (inventory.length === 0) {
+                listDiv.innerHTML = "<p>Empty inventory.</p>";
+                return;
+            }
+            listDiv.innerHTML = inventory.map((item, i) => `
+                <div class="card">
+                    <div>
+                        <strong>${item.name}</strong>
+                        <button class="del-btn" onclick="deleteItem(${i})">Del</button>
+                    </div>
+                    <div class="qty">
+                        <button onclick="updateQty(${i},-1)">-</button>
+                        <span>${item.qty}</span>
+                        <button onclick="updateQty(${i},1)">+</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addItem() {
+            const nameInput = document.getElementById('name');
+            const qtyInput = document.getElementById('qty');
+            if (!nameInput.value) return;
+            
+            inventory.push({ 
+                name: nameInput.value, 
+                qty: parseInt(qtyInput.value) || 0 
+            });
+            
+            nameInput.value = '';
+            qtyInput.value = '';
+            render();
+        }
+
+        function updateQty(i, change) {
+            inventory[i].qty = Math.max(0, parseInt(inventory[i].qty) + change);
+            render();
+        }
+
+        function deleteItem(i) {
+            if (confirm("Delete this item?")) {
+                inventory.splice(i, 1);
+                render();
+            }
+        }
+    </script>
+</body>
+</html>
