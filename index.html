@@ -45,6 +45,15 @@
     </div>
 
     <script>
+        // --- SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker registered', reg))
+                .catch(err => console.log('Service Worker failed', err));
+            });
+        }
+
         let inventory = [];
         let config = JSON.parse(localStorage.getItem('inv_config'));
 
@@ -78,7 +87,6 @@
             listDiv.innerHTML = "Fetching latest data...";
             
             try {
-                // The URL includes a timestamp to prevent the browser from showing old data
                 const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
                     headers: { 'Authorization': `token ${config.token}` }
                 });
@@ -89,7 +97,6 @@
 
                 const file = await res.json();
                 
-                // Proper UTF-8 Decoding
                 const binaryString = atob(file.content);
                 const bytes = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) {
