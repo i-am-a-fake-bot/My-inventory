@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: -apple-system, sans-serif; padding: 20px; background: #f0f2f5; color: #333; margin: 0; }
+        .header-space { padding: 20px; }
+        .sticky-container { position: sticky; top: 0; background: #f0f2f5; padding: 10px 20px; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .summary-bar { background: #343a40; color: white; padding: 15px; border-radius: 10px; display: flex; justify-content: space-around; font-size: 0.9em; text-align: center; }
+        .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; flex-direction: column; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .qty { font-weight: bold; font-size: 1.2em; color: #007bff; display: flex; align-items: center; gap: 15px; }
+        input, button { padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .sync-btn { background: #28a745; margin-top: 20px; }
+        .refresh-btn { background: #6c757d; margin-top: 10px; }
+        .del-btn { background: #dc3545; width: auto; padding: 5px 10px; font-size: 0.8em; margin: 0; }
+        #reset-area { text-align: right; padding: 10px 20px 0 0; }
+        .logout-link { color: #dc3545; font-size: 12px; cursor: pointer; text-decoration: underline; }
+        .details-row { font-size: 0.85em; color: #555; margin: 5px 0; display: flex; justify-content: space-between; flex-wrap: wrap; }
+        .price-box { border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px; }
+        .profit-text { color: #28a745; font-weight: bold; font-size: 0.9em; margin-top: 5px; }
+        #searchBar { background-color: #fff; border: 2px solid #007bff; margin-bottom: 15px; }
+        .error-box { color: red; background: #ffdada; padding: 15px; border-radius: 8px; border: 1px solid #ff9999; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+    <div id="reset-area"><span class="logout-link" onclick="logout()">Logout / Change Repo</span></div>
+    <div class="header-space"><h3>Inventory Tracker</h3></div>
+
+    <div id="setup" style="display:block; background: white; padding: 15px; border-radius: 10px; margin: 0 20px;">
+        <input type="password" id="ghToken" placeholder="GitHub Token">
+        <input type="text" id="ghRepo" placeholder="username/repo-name">
+        <button onclick="saveConfig()">Connect</button>
+        <button onclick="nuclearReset()" style="background:#6c757d; margin-top:20px; font-size: 0.8em;">⚠️ FORCE APP UPDATE</button>
+    </div>
+
+    <div id="app" style="display:none">
+        <div class="sticky-container">
+            <div class="summary-bar">
+                <div>Total Cost<br><strong id="totalCost">0.00</strong></div>
+                <div>Sell Value<br><strong id="totalSell">0.00</strong></div>
+            </div>
+        </div>
+
+        <div style="padding: 0 20px 20px 20px;">
+            <input type="text" id="name" placeholder="Item Name (e.g. Milo)">
+            <input type="number" id="cost" placeholder="Total Cost (e.g. 99)" oninput="calcRec()">
+            <input type="number" id="qty" placeholder="Quantity (e.g. 10)" oninput="calcRec()">
+            <input type="number" id="markup" placeholder="Markup %" value="12" oninput="calcRec()">
+            
+            <div style="background: #e9ecef; padding: 10px; border-radius: 8px; margin: 5px 0; font-size: 0.85em; color: #444; border-left: 4px solid #007bff;">
+                Unit Cost: <span id="unitCostDisp">0.00</span> | 
+                Rec. Selling Price: <strong id="recPrice">0.00</strong>
+            </div>
+            
+            <input type="number" id="sell" placeholder="Final Selling Price">
+            <button onclick="addItem()">Add to Inventory</button>
+            <hr>
+            <input type="text" id="searchBar" placeholder="🔍 Search products..." oninput="render()">
+            <div id="list">Loading...</div>
+            <button class="refresh-btn" onclick="fetchData()">🔄 Refresh List</button>
+            <button class="sync-btn" onclick="syncToCloud()">☁️ Sync to All Devices</button>
+        </div>
+    </div>
+
+    <script>
+        let inventory = [];
+        let config = JSON.parse(localStorage.getItem('inv_config'));
+
+        if (config) {
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            fetchData();
+        }
+
+        function calcRec() {
+            const totalCost = parseFloat(document.getElementById('cost').value) || 0;
+            const pieces = parseFloat(document.getElementById('qty').value) || 1;
+            const markup = parseFloat(document.getElementById('markup').value) || 0;
+
+            const unitCost = totalCost / pieces;
+            const rec = unitCost * (1 + (markup / 100));
+
+            document.getElementById('unitCostDisp').innerText = unitCost.toFixed(2);
+            document.getElementById('recPrice').innerText = rec.toFixed(2);
+            document.getElementById('sell').value = rec.toFixed(2);
+        }
+
+        function render() {
+            const listDiv = document.getElementById('list');
+            const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+            let sumCost = 0; let sumSell = 0;
+
+            const filtered = inventory.filter(item => {
+                const match = item.name.toLowerCase().includes(searchTerm);
+                if (match) {
+                    sumCost += parseFloat(item.cost) || 0;
+                    sumSell += (parseFloat(item.sell) || 0) * (parseFloat(item.qty) || 0);
+                }
+                return match;
+            });
+
+            document.getElementById('totalCost').innerText = sumCost.toFixed(2);
+            document.getElementById('totalSell').innerText = sumSell.toFixed(2);
+
+            if (inventory.length === 0) { 
+                listDiv.innerHTML = "<p style='text-align:center; padding:20px; color:#666;'>The inventory is empty. Add a product.</p>"; 
+                return; 
+            }
+
+            listDiv.innerHTML = filtered.map((item, i) => {
+                const actualIndex = inventory.indexOf(item);
+                const uCost = (parseFloat(item.cost) / parseFloat(item.qty)) || 0;
+                const currentProfit = parseFloat(item.sell) - uCost;
+                
+                return `
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong>${item.name}</strong>
+                        <button class="del-btn" onclick="deleteItem(${actualIndex})">Del</button>
+                    </div>
+                    <div class="details-row">
+                        <span>Unit Cost: ${uCost.toFixed(2)}</span>
+                        <span>Qty: ${item.qty}</span>
+                    </div>
+                    <div class="price-box">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <small>Selling Price:</small>
+                            <input type="number" value="${item.sell}" style="width:100px; padding:5px; margin:0;" onchange="updateField(${actualIndex}, 'sell', this.value)">
+                        </div>
+                        <div class="profit-text">Profit per pc: +${currentProfit.toFixed(2)}</div>
+                    </div>
+                    <div class="qty" style="justify-content: flex-end; margin-top:10px;">
+                        <button onclick="updateField(${actualIndex}, 'qty', ${parseFloat(item.qty) - 1})" style="width:40px; height:40px;">-</button>
+                        <span>${item.qty}</span>
+                        <button onclick="updateField(${actualIndex}, 'qty', ${parseFloat(item.qty) + 1})" style="width:40px; height:40px;">+</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function addItem() {
+            const n = document.getElementById('name').value;
+            const q = document.getElementById('qty').value;
+            const c = document.getElementById('cost').value;
+            const m = document.getElementById('markup').value;
+            const s = document.getElementById('sell').value;
+            if (!n || !q || !c) return;
+            inventory.push({ name: n, qty: q, cost: c, markup: m, sell: s });
+            render();
+            ['name','qty','cost','sell'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('unitCostDisp').innerText = "0.00";
+        }
+
+        function updateField(i, field, value) {
+            if(field === 'qty' && value < 0) value = 0;
+            inventory[i][field] = value;
+            render();
+        }
+
+        function deleteItem(i) { if (confirm("Delete?")) { inventory.splice(i, 1); render(); } }
+        function saveConfig() { 
+            const t = document.getElementById('ghToken').value.trim(); 
+            const r = document.getElementById('ghRepo').value.trim();
+            if(t && r) { localStorage.setItem('inv_config', JSON.stringify({token:t, repo:r})); location.reload(); }
+        }
+        function logout() { if(confirm("Logout?")) { localStorage.clear(); location.reload(); } }
+        async function nuclearReset() { /* Keep existing nuclearReset logic */ }
+        async function fetchData() { /* Keep existing fetchData logic */ }
+        async function syncToCloud() { /* Keep existing syncToCloud logic */ }
+    </script>
+</body>
+</html>
