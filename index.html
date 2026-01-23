@@ -8,41 +8,46 @@
         body { font-family: -apple-system, sans-serif; padding: 20px; background: #f0f2f5; }
         .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .qty { font-weight: bold; font-size: 1.2em; color: #007bff; display: flex; align-items: center; gap: 10px; }
-        input, button { padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin: 5px 0; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; }
-        .sync-btn { background: #28a745; width: 100%; margin-top: 20px; }
-        .refresh-btn { background: #6c757d; width: 100%; margin-top: 10px; }
-        .del-btn { background: #dc3545; padding: 5px 10px; font-size: 0.8em; margin-left: 10px; }
-        .reset-link { color: #888; font-size: 11px; text-decoration: underline; display: block; text-align: center; margin-top: 20px; cursor: pointer; }
+        input, button { padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .sync-btn { background: #28a745; margin-top: 20px; }
+        .refresh-btn { background: #6c757d; margin-top: 10px; }
+        .del-btn { background: #dc3545; width: auto; padding: 5px 10px; font-size: 0.8em; }
+        #reset-area { text-align: right; margin-bottom: 10px; }
+        .logout-link { color: #dc3545; font-size: 12px; cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
+
+    <div id="reset-area">
+        <span class="logout-link" onclick="logout()">Logout / Change Repo</span>
+    </div>
+
     <h3>Inventory Tracker</h3>
 
     <div id="setup" style="display:block; background: white; padding: 15px; border-radius: 10px;">
-        <p><small>Enter your GitHub Token to start syncing</small></p>
+        <p><small>Enter GitHub Credentials</small></p>
         <input type="password" id="ghToken" placeholder="GitHub Token">
         <input type="text" id="ghRepo" placeholder="username/repo-name">
-        <button onclick="saveConfig()" style="width: 100%;">Connect</button>
+        <button onclick="saveConfig()">Connect</button>
     </div>
 
     <div id="app" style="display:none">
         <input type="text" id="name" placeholder="Item Name">
         <input type="number" id="qty" placeholder="Qty">
-        <button onclick="addItem()" style="width: 100%;">Add Item</button>
+        <button onclick="addItem()">Add Item</button>
         <hr>
         <div id="list">Loading...</div>
         
         <button class="refresh-btn" onclick="fetchData()">🔄 Refresh List</button>
         <button class="sync-btn" onclick="syncToCloud()">☁️ Sync to All Devices</button>
-        
-        <span class="reset-link" onclick="logout()">Reset App Credentials</span>
     </div>
 
     <script>
         let inventory = [];
         let config = JSON.parse(localStorage.getItem('inv_config'));
 
+        // Check if we are logged in
         if (config) {
             document.getElementById('setup').style.display = 'none';
             document.getElementById('app').style.display = 'block';
@@ -55,31 +60,35 @@
             if (token && repo) {
                 localStorage.setItem('inv_config', JSON.stringify({token, repo}));
                 location.reload();
+            } else {
+                alert("Please fill in both fields");
             }
         }
 
         function logout() {
-            if(confirm("Logout and clear credentials?")) {
+            if(confirm("Clear Token and Repo Name?")) {
                 localStorage.clear();
                 location.reload();
             }
         }
 
-        // Improved Fetch with better error handling and decoding
         async function fetchData() {
             const listDiv = document.getElementById('list');
             listDiv.innerHTML = "Fetching latest data...";
             
             try {
+                // The URL includes a timestamp to prevent the browser from showing old data
                 const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
                     headers: { 'Authorization': `token ${config.token}` }
                 });
 
-                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                if (!res.ok) {
+                    throw new Error(`Status ${res.status}: Check Repo Name & Token`);
+                }
 
                 const file = await res.json();
                 
-                // Decode Base64 properly for UTF-8
+                // Proper UTF-8 Decoding
                 const binaryString = atob(file.content);
                 const bytes = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) {
@@ -90,24 +99,22 @@
                 inventory = JSON.parse(decodedText || "[]");
                 render();
             } catch (err) {
-                listDiv.innerHTML = `⚠️ Error: ${err.message}. Check if data.json contains [] and repo name is correct (user/repo).`;
+                listDiv.innerHTML = `⚠️ Error: ${err.message}<br><br>Click 'Logout' above and verify your username/repo format.`;
                 console.error(err);
             }
         }
 
         async function syncToCloud() {
             const btn = document.querySelector('.sync-btn');
-            btn.innerText = "Saving...";
+            btn.innerText = "Syncing...";
             btn.disabled = true;
 
             try {
-                // Get latest SHA to avoid "out of sync" errors
                 const getRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
                     headers: { 'Authorization': `token ${config.token}` }
                 });
                 const file = await getRes.json();
 
-                // Encode to Base64 properly for UTF-8
                 const jsonString = JSON.stringify(inventory);
                 const bytes = new TextEncoder().encode(jsonString);
                 const base64Content = btoa(String.fromCharCode(...bytes));
@@ -121,7 +128,7 @@
                         sha: file.sha
                     })
                 });
-                alert("Synced to Cloud!");
+                alert("Synced!");
             } catch (err) {
                 alert("Sync failed: " + err.message);
             } finally {
@@ -133,7 +140,7 @@
         function render() {
             const listDiv = document.getElementById('list');
             if (inventory.length === 0) {
-                listDiv.innerHTML = "<p>Empty inventory.</p>";
+                listDiv.innerHTML = "<p>No items found.</p>";
                 return;
             }
             listDiv.innerHTML = inventory.map((item, i) => `
@@ -143,26 +150,20 @@
                         <button class="del-btn" onclick="deleteItem(${i})">Del</button>
                     </div>
                     <div class="qty">
-                        <button onclick="updateQty(${i},-1)">-</button>
+                        <button onclick="updateQty(${i},-1)" style="width:30px">-</button>
                         <span>${item.qty}</span>
-                        <button onclick="updateQty(${i},1)">+</button>
+                        <button onclick="updateQty(${i},1)" style="width:30px">+</button>
                     </div>
                 </div>
             `).join('');
         }
 
         function addItem() {
-            const nameInput = document.getElementById('name');
-            const qtyInput = document.getElementById('qty');
-            if (!nameInput.value) return;
-            
-            inventory.push({ 
-                name: nameInput.value, 
-                qty: parseInt(qtyInput.value) || 0 
-            });
-            
-            nameInput.value = '';
-            qtyInput.value = '';
+            const n = document.getElementById('name');
+            const q = document.getElementById('qty');
+            if (!n.value) return;
+            inventory.push({ name: n.value, qty: parseInt(q.value) || 0 });
+            n.value = ''; q.value = '';
             render();
         }
 
@@ -172,7 +173,7 @@
         }
 
         function deleteItem(i) {
-            if (confirm("Delete this item?")) {
+            if (confirm("Delete?")) {
                 inventory.splice(i, 1);
                 render();
             }
