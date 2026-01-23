@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inventory-v1';
+const CACHE_NAME = 'inventory-v2'; // Changed version to force update
 const ASSETS = [
   './',
   './index.html',
@@ -6,18 +6,21 @@ const ASSETS = [
   'https://cdn-icons-png.flaticon.com/512/3081/3081913.png'
 ];
 
-// Install the service worker and cache files
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
+  self.skipWaiting();
 });
 
-// Serve files from cache when offline
 self.addEventListener('fetch', (e) => {
+  // IGNORE GITHUB API CALLS - Always go to network
+  if (e.request.url.includes('api.github.com')) {
+    return e.respondWith(fetch(e.request));
+  }
+
+  // For other files, try Network first, fall back to Cache
   e.respondWith(
-    caches.match(e.request).then((response) => {
-      return response || fetch(e.request);
-    })
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });
