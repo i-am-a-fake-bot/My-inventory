@@ -69,7 +69,9 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    reg.update(); // Force update check
+                }).catch(err => console.log(err));
             });
         }
 
@@ -112,7 +114,8 @@
             try {
                 const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
                     headers: { 
-                        'Authorization': `token ${config.token}`,
+                        'Authorization': `Bearer ${config.token}`,
+                        'Accept': 'application/vnd.github.v3+json',
                         'Cache-Control': 'no-cache' 
                     }
                 });
@@ -120,14 +123,13 @@
                 if (!res.ok) throw new Error(`Status ${res.status}: ${res.statusText}`);
 
                 const file = await res.json();
-                // Enhanced decoding to prevent "Empty Data" bugs
                 const decodedText = decodeURIComponent(escape(atob(file.content)));
                 inventory = JSON.parse(decodedText || "[]");
                 render();
             } catch (err) {
                 listDiv.innerHTML = `<div class="error-box">
                     <strong>Connection Failed</strong><br>${err.message}<br><br>
-                    <small>Verify data.json contains [] on GitHub</small>
+                    <small>Check if data.json is valid [] and token has 'Contents' permission.</small>
                 </div>`;
             }
         }
@@ -138,23 +140,25 @@
             btn.disabled = true;
 
             try {
-                // Fetch fresh SHA immediately before saving to prevent overwriting errors
                 const getRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
-                    headers: { 'Authorization': `token ${config.token}` }
+                    headers: { 
+                        'Authorization': `Bearer ${config.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
                 });
                 
                 if (!getRes.ok) throw new Error("Could not fetch file version (SHA)");
                 const file = await getRes.json();
 
-                // Robust encoding for Base64
                 const jsonString = JSON.stringify(inventory);
                 const base64Content = btoa(unescape(encodeURIComponent(jsonString)));
 
                 const putRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
                     method: 'PUT',
                     headers: { 
-                        'Authorization': `token ${config.token}`,
-                        'Content-Type': 'application/json'
+                        'Authorization': `Bearer ${config.token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
                     },
                     body: JSON.stringify({
                         message: "Inventory Update",
