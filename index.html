@@ -13,6 +13,7 @@
         .sync-btn { background: #28a745; width: 100%; margin-top: 20px; }
         .refresh-btn { background: #6c757d; width: 100%; margin-top: 10px; }
         .del-btn { background: #dc3545; padding: 5px 10px; font-size: 0.8em; margin-left: 10px; }
+        .reset-link { color: #888; font-size: 11px; text-decoration: underline; display: block; text-align: center; margin-top: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -22,18 +23,20 @@
         <p><small>Enter your GitHub Token to start syncing</small></p>
         <input type="password" id="ghToken" placeholder="GitHub Token">
         <input type="text" id="ghRepo" placeholder="username/repo-name">
-        <button onclick="saveConfig()">Connect</button>
+        <button onclick="saveConfig()" style="width: 100%;">Connect</button>
     </div>
 
     <div id="app" style="display:none">
         <input type="text" id="name" placeholder="Item Name">
         <input type="number" id="qty" placeholder="Qty">
-        <button onclick="addItem()">Add Item</button>
+        <button onclick="addItem()" style="width: 100%;">Add Item</button>
         <hr>
         <div id="list">Loading...</div>
         
         <button class="refresh-btn" onclick="fetchData()">🔄 Refresh List</button>
         <button class="sync-btn" onclick="syncToCloud()">☁️ Sync to All Devices</button>
+        
+        <span class="reset-link" onclick="logout()">Reset App Credentials</span>
     </div>
 
     <script>
@@ -55,51 +58,74 @@
             }
         }
 
+        function logout() {
+            if(confirm("Logout and clear credentials?")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        // Improved Fetch with better error handling and decoding
         async function fetchData() {
             const listDiv = document.getElementById('list');
-            const originalText = "🔄 Refresh List";
             listDiv.innerHTML = "Fetching latest data...";
             
             try {
-                // cache-busting timestamp added to URL (?t=...)
                 const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
                     headers: { 'Authorization': `token ${config.token}` }
                 });
+
+                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+
                 const file = await res.json();
-                inventory = JSON.parse(atob(file.content));
+                
+                // Decode Base64 properly for UTF-8
+                const binaryString = atob(file.content);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                const decodedText = new TextDecoder().decode(bytes);
+                
+                inventory = JSON.parse(decodedText || "[]");
                 render();
             } catch (err) {
-                listDiv.innerHTML = "⚠️ Error. Make sure data.json exists in repo.";
+                listDiv.innerHTML = `⚠️ Error: ${err.message}. Check if data.json contains [] and repo name is correct (user/repo).`;
                 console.error(err);
             }
         }
 
         async function syncToCloud() {
             const btn = document.querySelector('.sync-btn');
-            const oldText = btn.innerText;
             btn.innerText = "Saving...";
             btn.disabled = true;
 
             try {
+                // Get latest SHA to avoid "out of sync" errors
                 const getRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
                     headers: { 'Authorization': `token ${config.token}` }
                 });
                 const file = await getRes.json();
+
+                // Encode to Base64 properly for UTF-8
+                const jsonString = JSON.stringify(inventory);
+                const bytes = new TextEncoder().encode(jsonString);
+                const base64Content = btoa(String.fromCharCode(...bytes));
 
                 await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
                     method: 'PUT',
                     headers: { 'Authorization': `token ${config.token}` },
                     body: JSON.stringify({
                         message: "update inventory",
-                        content: btoa(JSON.stringify(inventory)),
+                        content: base64Content,
                         sha: file.sha
                     })
                 });
                 alert("Synced to Cloud!");
             } catch (err) {
-                alert("Sync failed. Check connection.");
+                alert("Sync failed: " + err.message);
             } finally {
-                btn.innerText = oldText;
+                btn.innerText = "☁️ Sync to All Devices";
                 btn.disabled = false;
             }
         }
