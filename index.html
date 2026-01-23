@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: -apple-system, sans-serif; padding: 20px; background: #f0f2f5; color: #333; margin: 0; }
+        
+        /* Sticky Header Logic */
+        .header-space { padding: 20px; }
+        .sticky-container {
+            position: sticky;
+            top: 0;
+            background: #f0f2f5;
+            padding: 10px 20px;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .summary-bar { 
+            background: #343a40; 
+            color: white; 
+            padding: 15px; 
+            border-radius: 10px; 
+            display: flex; 
+            justify-content: space-around; 
+            font-size: 0.9em; 
+            text-align: center; 
+        }
+
+        .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; flex-direction: column; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .qty { font-weight: bold; font-size: 1.2em; color: #007bff; display: flex; align-items: center; gap: 10px; }
+        input, button { padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .sync-btn { background: #28a745; margin-top: 20px; }
+        .refresh-btn { background: #6c757d; margin-top: 10px; }
+        .del-btn { background: #dc3545; width: auto; padding: 5px 10px; font-size: 0.8em; margin: 0; }
+        #reset-area { text-align: right; padding: 10px 20px 0 0; }
+        .logout-link { color: #dc3545; font-size: 12px; cursor: pointer; text-decoration: underline; }
+        .details-row { font-size: 0.85em; color: #555; margin: 5px 0; display: flex; justify-content: space-between; flex-wrap: wrap; }
+        .price-box { border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px; }
+        #searchBar { background-color: #fff; border: 2px solid #007bff; margin-bottom: 15px; }
+        .error-box { color: red; background: #ffdada; padding: 15px; border-radius: 8px; border: 1px solid #ff9999; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+    <div id="reset-area">
+        <span class="logout-link" onclick="logout()">Logout / Change Repo</span>
+    </div>
+
+    <div class="header-space">
+        <h3>Inventory Tracker</h3>
+    </div>
+
+    <div id="setup" style="display:block; background: white; padding: 15px; border-radius: 10px; margin: 0 20px;">
+        <p><small>GitHub Credentials</small></p>
+        <input type="password" id="ghToken" placeholder="GitHub Token">
+        <input type="text" id="ghRepo" placeholder="username/repo-name">
+        <button onclick="saveConfig()">Connect</button>
+        <button onclick="nuclearReset()" style="background:#6c757d; margin-top:20px; font-size: 0.8em;">⚠️ FORCE APP UPDATE (Fix Fetch Error)</button>
+    </div>
+
+    <div id="app" style="display:none">
+        <div class="sticky-container">
+            <div class="summary-bar" id="summary">
+                <div>Cost Value<br><strong id="totalCost">0.00</strong></div>
+                <div>Selling Value<br><strong id="totalSell">0.00</strong></div>
+            </div>
+        </div>
+
+        <div style="padding: 0 20px 20px 20px;">
+            <input type="text" id="name" placeholder="Item Name">
+            <input type="number" id="qty" placeholder="Quantity">
+            <input type="number" id="cost" placeholder="Cost Price" oninput="calcRec()">
+            <input type="number" id="markup" placeholder="Markup %" value="12" oninput="calcRec()">
+            
+            <div style="background: #e9ecef; padding: 8px; border-radius: 8px; margin: 5px 0; font-size: 0.85em; color: #444;">
+                <strong>Recommended: </strong> <span id="recPrice">0.00</span>
+            </div>
+            
+            <input type="number" id="sell" placeholder="Selling Price">
+            <button onclick="addItem()">Add Item</button>
+            
+            <hr>
+            
+            <input type="text" id="searchBar" placeholder="🔍 Search products..." oninput="render()">
+
+            <div id="list">Loading...</div>
+            
+            <button class="refresh-btn" onclick="fetchData()">🔄 Refresh List</button>
+            <button class="sync-btn" onclick="syncToCloud()">☁️ Sync to All Devices</button>
+        </div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    reg.update();
+                }).catch(err => console.log(err));
+            });
+        }
+
+        let inventory = [];
+        let config = JSON.parse(localStorage.getItem('inv_config'));
+
+        if (config) {
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            fetchData();
+        }
+
+        async function nuclearReset() {
+            if(confirm("This will wipe all app data and reload. Continue?")) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for(let reg of regs) { await reg.unregister(); }
+                const cacheNames = await caches.keys();
+                for(let name of cacheNames) { await caches.delete(name); }
+                localStorage.clear();
+                location.reload(true);
+            }
+        }
+
+        function calcRec() {
+            const cost = parseFloat(document.getElementById('cost').value) || 0;
+            const markup = parseFloat(document.getElementById('markup').value) || 0;
+            const rec = cost * (1 + (markup / 100));
+            document.getElementById('recPrice').innerText = rec.toFixed(2);
+            document.getElementById('sell').value = rec.toFixed(2);
+        }
+
+        function saveConfig() {
+            const token = document.getElementById('ghToken').value.trim();
+            const repo = document.getElementById('ghRepo').value.trim();
+            if (token && repo) {
+                localStorage.setItem('inv_config', JSON.stringify({token, repo}));
+                location.reload();
+            }
+        }
+
+        function logout() {
+            if(confirm("Clear Token and Repo Name?")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        async function fetchData() {
+            const listDiv = document.getElementById('list');
+            listDiv.innerHTML = "Fetching latest data...";
+            try {
+                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                    method: 'GET',
+                    headers: { 
+                        'Authorization': `Bearer ${config.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    cache: 'no-store'
+                });
+
+                if (!res.ok) throw new Error(`Status ${res.status}`);
+
+                const file = await res.json();
+                const decodedText = decodeURIComponent(escape(atob(file.content)));
+                inventory = JSON.parse(decodedText || "[]");
+                render();
+            } catch (err) {
+                listDiv.innerHTML = `<div class="error-box">Connection Failed: ${err.message}</div>`;
+            }
+        }
+
+        async function syncToCloud() {
+            const btn = document.querySelector('.sync-btn');
+            btn.innerText = "Saving...";
+            btn.disabled = true;
+
+            try {
+                const getRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${config.token}`, 'Accept': 'application/vnd.github.v3+json' },
+                    cache: 'no-store'
+                });
+                
+                const file = await getRes.json();
+                const jsonString = JSON.stringify(inventory);
+                const base64Content = btoa(unescape(encodeURIComponent(jsonString)));
+
+                const putRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: "Update", content: base64Content, sha: file.sha })
+                });
+
+                if (putRes.ok) { alert("Synced Successfully!"); fetchData(); }
+            } catch (err) { alert("Sync Error: " + err.message); }
+            finally { btn.innerText = "☁️ Sync to All Devices"; btn.disabled = false; }
+        }
+
+        function render() {
+            const listDiv = document.getElementById('list');
+            const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+            
+            let totalCost = 0;
+            let totalSell = 0;
+
+            const filtered = inventory.filter(item => {
+                const match = item.name.toLowerCase().includes(searchTerm);
+                if (match) {
+                    totalCost += (parseFloat(item.cost) || 0) * (parseInt(item.qty) || 0);
+                    totalSell += (parseFloat(item.sell) || 0) * (parseInt(item.qty) || 0);
+                }
+                return match;
+            });
+
+            document.getElementById('totalCost').innerText = totalCost.toFixed(2);
+            document.getElementById('totalSell').innerText = totalSell.toFixed(2);
+
+            // CHANGED MESSAGE HERE
+            if (inventory.length === 0) { 
+                listDiv.innerHTML = "<p style='text-align:center; padding:20px; color:#666;'>The inventory is empty. Add a product.</p>"; 
+                return; 
+            }
+
+            if (filtered.length === 0) {
+                listDiv.innerHTML = "<p style='text-align:center; padding:20px; color:#666;'>No matching items found.</p>";
+                return;
+            }
+            
+            listDiv.innerHTML = filtered.map((item, i) => {
+                const actualIndex = inventory.indexOf(item);
+                const rec = (parseFloat(item.cost || 0) * (1 + (parseFloat(item.markup || 12) / 100))).toFixed(2);
+                
+                return `
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong>${item.name}</strong>
+                        <button class="del-btn" onclick="deleteItem(${actualIndex})">Del</button>
+                    </div>
+                    <div class="details-row">
+                        <span>Cost: ${item.cost}</span>
+                        <span>Markup: ${item.markup}%</span>
+                        <span style="color:#666">Rec: ${rec}</span>
+                    </div>
+                    <div class="price-box">
+                        <small>Selling Price:</small>
+                        <input type="number" value="${item.sell}" 
+                               style="width:100px; padding:5px; margin:0;" 
+                               onchange="updateField(${actualIndex}, 'sell', this.value)">
+                    </div>
+                    <div class="qty" style="justify-content: flex-end; margin-top:10px;">
+                        <button onclick="updateField(${actualIndex}, 'qty', ${parseInt(item.qty) - 1})" style="width:30px">-</button>
+                        <span>${item.qty}</span>
+                        <button onclick="updateField(${actualIndex}, 'qty', ${parseInt(item.qty) + 1})" style="width:30px">+</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function addItem() {
+            const n = document.getElementById('name').value;
+            const q = document.getElementById('qty').value;
+            const c = document.getElementById('cost').value;
+            const m = document.getElementById('markup').value;
+            const s = document.getElementById('sell').value;
+            if (!n) return;
+            inventory.push({ name: n, qty: parseInt(q) || 0, cost: c, markup: m, sell: s });
+            render();
+            ['name','qty','cost','sell'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('markup').value = 12;
+            document.getElementById('recPrice').innerText = "0.00";
+        }
+
+        function updateField(i, field, value) {
+            if(field === 'qty' && value < 0) value = 0;
+            inventory[i][field] = value;
+            render();
+        }
+
+        function deleteItem(i) { 
+            if (confirm("Delete this item?")) { 
+                inventory.splice(i, 1); 
+                render(); 
+            } 
+        }
+    </script>
+</body>
+</html>
