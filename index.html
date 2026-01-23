@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		    <meta charset="UTF-8">
+		        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+			    <title>Simple Inventory</title>
+			        <style>
+        body { font-family: -apple-system, sans-serif; padding: 20px; background: #f0f2f5; }
+	        .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+		        .qty { font-weight: bold; font-size: 1.2em; color: #007bff; }
+			        input, button { padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin: 5px 0; }
+				        button { background: #007bff; color: white; border: none; cursor: pointer; }
+					        .sync-btn { background: #28a745; width: 100%; margin-top: 20px; }
+						    </style>
+	</head>
+	<body>
+		    <h3>Inventory Tracker</h3>
+		        
+		        <div id="setup" style="display:block; background: white; padding: 15px; border-radius: 10px;">
+				        <p><small>Enter your GitHub Token to start syncing</small></p>
+					        <input type="password" id="ghToken" placeholder="GitHub Token">
+						        <input type="text" id="ghRepo" placeholder="username/repo-name">
+							        <button onclick="saveConfig()">Connect</button>
+								    </div>
+
+								        <div id="app" style="display:none">
+										        <input type="text" id="name" placeholder="Item Name">
+											        <input type="number" id="qty" placeholder="Qty">
+												        <button onclick="addItem()">Add Item</button>
+													        <hr>
+														        <div id="list"></div>
+															        <button class="sync-btn" onclick="syncToCloud()">☁️ Sync to All Devices</button>
+																    </div>
+
+																        <script>
+																		        let inventory = [];
+																			        let config = JSON.parse(localStorage.getItem('inv_config'));
+
+																			        if (config) {
+																					            document.getElementById('setup').style.display = 'none';
+																					            document.getElementById('app').style.display = 'block';
+																					            fetchData();
+																					        }
+
+																			        function saveConfig() {
+																					            const token = document.getElementById('ghToken').value;
+																					            const repo = document.getElementById('ghRepo').value;
+																					            localStorage.setItem('inv_config', JSON.stringify({token, repo}));
+																					            location.reload();
+																					        }
+
+																			        async function fetchData() {
+																					            const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+																							                    headers: { 'Authorization': `token ${config.token}` }
+																							                });
+																					            const file = await res.json();
+																					            inventory = JSON.parse(atob(file.content));
+																					            render();
+																					        }
+
+																			        async function syncToCloud() {
+																					            // This gets the latest file SHA first to avoid conflicts
+																					            const getRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+																							                    headers: { 'Authorization': `token ${config.token}` }
+																							                });
+																					            const file = await getRes.json();
+																					            
+																					            await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+																							                    method: 'PUT',
+																							                    headers: { 'Authorization': `token ${config.token}` },
+																							                    body: JSON.stringify({
+																										                        message: "update inventory",
+																										                        content: btoa(JSON.stringify(inventory)),
+																										                        sha: file.sha
+																										                    })
+																							                });
+																					            alert("Synced!");
+																					        }
+
+																			        function render() {
+																					            document.getElementById('list').innerHTML = inventory.map((item, i) => `
+																						                    <div class="card">
+																								                        <span>${item.name}</span>
+																											                    <div class="qty">
+																													                            <button onclick="updateQty(${i},-1)">-</button>
+																																                            ${item.qty}
+																																			                            <button onclick="updateQty(${i},1)">+</button>
+																																						                        </div>
+																																									                </div>
+																																											            `).join('');
+																					        }
+
+																			        function addItem() {
+																					            inventory.push({ name: document.getElementById('name').value, qty: document.getElementById('qty').value });
+																					            render();
+																					        }
+
+																			        function updateQty(i, change) {
+																					            inventory[i].qty = parseInt(inventory[i].qty) + change;
+																					            render();
+																					        }
+																			    </script>
+	</body>
+</html>
+
