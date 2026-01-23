@@ -1,0 +1,15 @@
+{
+  "name": "Inventory Tracker",
+  "short_name": "Stock",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#28a745",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3081/3081913.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
