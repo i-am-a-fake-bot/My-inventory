@@ -4,7 +4,7 @@ const ASSETS = [
   './index.html',
   './offline.html',
   './manifest.json',
-  'https://cdn-icons-png.flaticon.com/512/3081/3081913.png'
+  'online-shopping.png'
 ];
 
 self.addEventListener('install', (e) => {
