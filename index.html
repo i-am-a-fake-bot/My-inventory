@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager Pro - PH</title>
+    <title>Manager Pro - Command Mode</title>
     <style>
         :root {
             --primary: #007bff;
             --success: #28a745;
+            --info: #17a2b8;
+            --warning: #ffc107;
             --danger: #dc3545;
             --dark: #212529;
             --bg: #f4f7f6;
@@ -38,27 +40,31 @@
 
         .card { 
             background: white; border-radius: 12px; overflow: hidden;
-            display: flex; flex-direction: column; border: 1px solid #eee; position: relative;
+            display: flex; flex-direction: column; border: 1px solid #eee;
         }
         
-        .card-header { padding: 10px; font-weight: bold; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;}
-        .del-btn { background: none; border: none; color: #ccc; font-size: 18px; cursor: pointer; }
+        .card-header { padding: 10px; font-weight: bold; background: #fafafa; border-bottom: 1px solid #eee; text-align: center; }
 
-        .card-body { padding: 12px; }
+        .card-body { padding: 12px; flex-grow: 1; }
         .detail-line { font-size: 0.8em; color: #666; margin-bottom: 4px; display: flex; justify-content: space-between; }
         .detail-line b { color: #333; }
         
-        .price-tag { font-size: 1.3em; font-weight: 800; color: var(--success); margin: 8px 0; display: block; }
+        .price-tag { font-size: 1.3em; font-weight: 800; color: var(--success); margin: 5px 0; display: block; text-align: center; }
 
-        .card-footer { padding: 10px; background: #fff; display: flex; justify-content: center; }
-        .qty-pill { 
-            display: flex; align-items: center; background: #f0f2f5; 
-            border-radius: 20px; padding: 2px 5px; width: 100%; justify-content: space-between;
+        /* Action Buttons Grid */
+        .card-actions { 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 10px; 
+            background: #f8f9fa; border-top: 1px solid #eee;
         }
-        .qty-btn { 
-            width: 35px; height: 35px; border-radius: 50%; border: none; 
-            background: white; font-weight: bold; font-size: 1.2em; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .act-btn { 
+            padding: 8px; border: none; border-radius: 6px; font-size: 0.75em; 
+            font-weight: bold; cursor: pointer; color: white;
         }
+        .btn-sell { background: var(--success); grid-column: span 2; margin-bottom: 5px; font-size: 1em;}
+        .btn-restock { background: var(--info); }
+        .btn-edit { background: var(--warning); color: #333; }
+        .btn-copy { background: var(--primary); }
+        .btn-del { background: var(--danger); }
 
         .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; }
         .fab { width: 50px; height: 50px; border-radius: 50%; border: none; color: white; font-size: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
@@ -73,6 +79,7 @@
         </div>
 
         <div class="input-section">
+            <h3 id="formTitle" style="margin-top:0">Add New Item</h3>
             <div class="grid-inputs">
                 <input type="text" id="name" placeholder="Item Name" class="full-width">
                 <input type="number" id="cost" placeholder="Total Paid" oninput="calcRec()">
@@ -84,7 +91,10 @@
                 <input type="number" id="markup" placeholder="Markup %" value="12" oninput="calcRec()">
                 <input type="number" id="sell" placeholder="Selling Price">
             </div>
-            <button onclick="addItem()" style="margin-top:15px; background: var(--primary); color:white; border:none; width:100%; padding:12px; border-radius:8px; font-weight:bold;">+ Add Item</button>
+            <div id="formButtons" style="margin-top:15px; display: flex; gap: 10px;">
+                <button id="mainBtn" onclick="addItem()" style="flex:2; background: var(--primary); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">+ Add to Shop</button>
+                <button id="cancelBtn" onclick="resetForm()" style="flex:1; background: #ccc; border:none; border-radius:8px; display:none;">Cancel</button>
+            </div>
         </div>
 
         <div style="padding: 0 15px;"><input type="text" id="searchBar" placeholder="🔍 Search inventory..." oninput="render()"></div>
@@ -101,11 +111,11 @@
         <input type="password" id="ghToken" placeholder="GitHub Token" style="margin-bottom:10px;">
         <input type="text" id="ghRepo" placeholder="username/repo" style="margin-bottom:10px;">
         <button onclick="saveConfig()" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px;">Connect Shop</button>
-        <p onclick="logout()" style="color:red; margin-top:20px; font-size:0.8em; cursor:pointer;">Reset System</p>
     </div>
 
     <script>
         let inventory = [];
+        let editingIndex = -1;
         let config = JSON.parse(localStorage.getItem('inv_config'));
 
         if (config) {
@@ -126,35 +136,10 @@
             const rec = unit * (1 + (mark / 100));
             document.getElementById('unitCostDisp').innerText = unit.toFixed(2);
             document.getElementById('recPrice').innerText = rec.toFixed(2);
-            document.getElementById('sell').value = rec.toFixed(2);
+            if(editingIndex === -1) document.getElementById('sell').value = rec.toFixed(2);
         }
 
-        async function fetchData() {
-            try {
-                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
-                    headers: { 'Authorization': `Bearer ${config.token}` }
-                });
-                const file = await res.json();
-                inventory = JSON.parse(decodeURIComponent(escape(atob(file.content))) || "[]");
-                render();
-            } catch (err) { console.error("Load failed"); }
-        }
-
-        async function syncToCloud() {
-            try {
-                const getRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
-                    headers: { 'Authorization': `Bearer ${config.token}` }
-                });
-                const file = await getRes.json();
-                const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(inventory))));
-                await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${config.token}` },
-                    body: JSON.stringify({ message: "Update", content: b64, sha: file.sha })
-                });
-                alert("Inventory Saved to Cloud");
-            } catch (err) { alert("Sync Failed"); }
-        }
+        // --- Core Logic ---
 
         function render() {
             const listDiv = document.getElementById('list');
@@ -174,31 +159,80 @@
             document.getElementById('totalSell').innerText = formatPHP(sumSell);
 
             listDiv.innerHTML = filtered.map((item, i) => {
-                const actualIndex = inventory.indexOf(item);
-                const unitCost = (parseFloat(item.cost) / parseFloat(item.qtyInitial || item.qty)) || 0;
+                const idx = inventory.indexOf(item);
+                const unitCost = (parseFloat(item.cost) / (item.qtyInitial || item.qty)) || 0;
                 const profit = parseFloat(item.sell) - unitCost;
 
                 return `
                 <div class="card">
-                    <div class="card-header">
-                        <span>${item.name}</span>
-                        <button class="del-btn" onclick="deleteItem(${actualIndex})">×</button>
-                    </div>
+                    <div class="card-header">${item.name}</div>
                     <div class="card-body">
                         <span class="price-tag">${formatPHP(item.sell)}</span>
-                        <div class="detail-line">Unit Cost: <b>${unitCost.toFixed(2)}</b></div>
                         <div class="detail-line">Profit: <b style="color:var(--success)">+${profit.toFixed(2)}</b></div>
-                        <div class="detail-line">In Stock: <b>${item.qty}</b></div>
+                        <div class="detail-line">Stock: <b>${item.qty}</b></div>
                     </div>
-                    <div class="card-footer">
-                        <div class="qty-pill">
-                            <button class="qty-btn" onclick="updateQty(${actualIndex}, -1)">−</button>
-                            <span style="font-weight:bold">${item.qty}</span>
-                            <button class="qty-btn" onclick="updateQty(${actualIndex}, 1)">+</button>
-                        </div>
+                    <div class="card-actions">
+                        <button class="act-btn btn-sell" onclick="sellItem(${idx})">SELL</button>
+                        <button class="act-btn btn-restock" onclick="restockItem(${idx})">Stock</button>
+                        <button class="act-btn btn-edit" onclick="editItem(${idx})">Edit</button>
+                        <button class="act-btn btn-copy" onclick="copyItem(${idx})">Copy</button>
+                        <button class="act-btn btn-del" onclick="deleteItem(${idx})">Del</button>
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // --- Actions ---
+
+        function sellItem(idx) {
+            const amount = prompt(`How many "${inventory[idx].name}" are being bought?`, "1");
+            if (amount === null) return;
+            const val = parseInt(amount);
+            if (val > inventory[idx].qty) return alert("Not enough stock!");
+            if (val > 0) {
+                inventory[idx].qty -= val;
+                render();
+            }
+        }
+
+        function restockItem(idx) {
+            const amount = prompt(`How many "${inventory[idx].name}" are you adding to stock?`);
+            if (amount === null) return;
+            const val = parseInt(amount);
+            if (val > 0) {
+                inventory[idx].qty = (parseInt(inventory[idx].qty) || 0) + val;
+                render();
+            }
+        }
+
+        function editItem(idx) {
+            editingIndex = idx;
+            const item = inventory[idx];
+            document.getElementById('name').value = item.name;
+            document.getElementById('cost').value = item.cost;
+            document.getElementById('qty').value = item.qty;
+            document.getElementById('sell').value = item.sell;
+            document.getElementById('formTitle').innerText = "Editing Item";
+            document.getElementById('mainBtn').innerText = "Update Item";
+            document.getElementById('cancelBtn').style.display = "block";
+            window.scrollTo(0,0);
+        }
+
+        function copyItem(idx) {
+            const item = inventory[idx];
+            document.getElementById('name').value = item.name + " (Copy)";
+            document.getElementById('cost').value = item.cost;
+            document.getElementById('qty').value = item.qty;
+            document.getElementById('sell').value = item.sell;
+            document.getElementById('formTitle').innerText = "Copying Item";
+            window.scrollTo(0,0);
+        }
+
+        function deleteItem(idx) {
+            if (confirm(`Are you sure you want to delete "${inventory[idx].name}"?`)) {
+                inventory.splice(idx, 1);
+                render();
+            }
         }
 
         function addItem() {
@@ -206,29 +240,61 @@
             const q = parseFloat(document.getElementById('qty').value);
             const c = parseFloat(document.getElementById('cost').value);
             const s = parseFloat(document.getElementById('sell').value);
-            
-            if (!n || q <= 0 || c <= 0 || s <= 0) return alert("Check inputs (no 0 or negative)");
-            if (inventory.some(i => i.name.toLowerCase() === n.toLowerCase())) return alert("Duplicate name!");
 
-            inventory.push({ name: n, qty: q, qtyInitial: q, cost: c, sell: s });
+            if (!n || q <= 0 || c <= 0 || s <= 0) return alert("Values must be greater than 0");
+
+            if (editingIndex > -1) {
+                inventory[editingIndex] = { name: n, qty: q, qtyInitial: q, cost: c, sell: s };
+                resetForm();
+            } else {
+                if (inventory.some(i => i.name.toLowerCase() === n.toLowerCase())) return alert("Duplicate name!");
+                inventory.push({ name: n, qty: q, qtyInitial: q, cost: c, sell: s });
+            }
             render();
+            resetForm();
+        }
+
+        function resetForm() {
+            editingIndex = -1;
             ['name','qty','cost','sell'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('formTitle').innerText = "Add New Item";
+            document.getElementById('mainBtn').innerText = "+ Add to Shop";
+            document.getElementById('cancelBtn').style.display = "none";
         }
 
-        function updateQty(index, change) {
-            let newQty = parseFloat(inventory[index].qty) + change;
-            if (newQty < 0) newQty = 0;
-            inventory[index].qty = newQty;
-            render();
+        // --- Cloud Logic ---
+        async function fetchData() {
+            try {
+                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${config.token}` }
+                });
+                const file = await res.json();
+                inventory = JSON.parse(decodeURIComponent(escape(atob(file.content))) || "[]");
+                render();
+            } catch (err) { alert("Load Error"); }
         }
 
-        function deleteItem(i) { if(confirm("Delete item?")) { inventory.splice(i,1); render(); } }
+        async function syncToCloud() {
+            try {
+                const getRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${config.token}` }
+                });
+                const file = await getRes.json();
+                const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(inventory))));
+                await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${config.token}` },
+                    body: JSON.stringify({ message: "Update", content: b64, sha: file.sha })
+                });
+                alert("Shop Synced!");
+            } catch (err) { alert("Sync Error"); }
+        }
+
         function saveConfig() { 
             const t = document.getElementById('ghToken').value; 
             const r = document.getElementById('ghRepo').value; 
             if(t && r) { localStorage.setItem('inv_config', JSON.stringify({token:t, repo:r})); location.reload(); }
         }
-        function logout() { localStorage.clear(); location.reload(); }
     </script>
 </body>
 </html>
