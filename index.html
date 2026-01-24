@@ -1,3 +1,86 @@
+are all of these checked---
+1. inventory tab 
+a. inventory product cards - restock,edit,copy,delete buttons 
+b. product card - add cost/pc,price,profit,stock info
+c. product form - labelled product name, cost, qty, markup%, sellingprice. recommendedprice have the amount shown with a small button 'USE'. Add ₱ in the textboxes for cost and sellingprice 2 decimal places -
+d. low stock/sold out - low stock threshold is <=3, color the card background yellow. if product goes 0, color the card background red, sold out badge should show.
+e. cancel button in the product form - clears the fields when i decide to cancel edit,copy,addnew. place the cancel button on the right. equal size with saveproduct button 
+f. recommendedprice - rename 'Rec Price' to 'Recommended Price' 
+g. Add max stock 50 threshold per item
+h. cost - rename Cost to 'Cost per Pack'
+i. qty - rename qty to 'Pc per Pack'
+2. pos tab - rename POS to Checkout
+a. sticky search bar
+b. inventory table format - itemname, price, stock 
+c. add to cart - a popup that asks how many is being bought 
+d. Cart 
+e. quick switching cash buttons - ₱20.00,₱50.00,₱500.00,₱100.00,₱1k 
+f. Change computation - Short compute 
+g. Confirm button - Disable “Confirm” button when payment is short. after Confirm, Add receipt-style sale summary modal
+3. dashboard - capital,inventoryvalue,sales,profit 
+4. refresh button 
+5. sync to repo (cloud) 
+6. Cloud Last Synced 
+7. layout not overlapping or boring? -
+8. data.json is not empty - is it showing in the app? if data.json is missing recreate it.
+9. manifest.json and sw.js are created and are in repo - is it linked in the html? 
+10. Numbers - number inputs to allow for decimals (cents). 
+11. Safety - Add a check to prevent saving a product if the GitHub config is missing. the app does not warn before an accidentally refresh the page or browser 
+12. Smart Sync - sync to cloud every 5mins. include a "Loading" spinner 
+13. tested with android phone. app downloaded. working
+14. add a logout -- make it small, place on the lower left corner
+15. Prevent negative qty number
+16. Prevent negative or 0 amount number
+17. Is profit drifting?
+18. the tablet app refreshed and logged me out. i logged in but now the inventory is not showing. offline mode. data.json has data
+
+here--
+manifest.json ---
+{
+  "name": "Inventory Tracker",
+  "short_name": "Stock",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#28a745",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3081/3081913.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+
+sw.js ---
+const CACHE_NAME = 'inventory-v2'; // Changed version to force update
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  'https://cdn-icons-png.flaticon.com/512/3081/3081913.png'
+];
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('fetch', (e) => {
+  // IGNORE GITHUB API CALLS - Always go to network
+  if (e.request.url.includes('api.github.com')) {
+    return e.respondWith(fetch(e.request));
+  }
+
+  // For other files, try Network first, fall back to Cache
+  e.respondWith(
+    fetch(e.request).catch(() => caches.match(e.request))
+  );
+});
+
+index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
