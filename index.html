@@ -3,71 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager Pro v2.2</title>
+    <title>Manager Pro v2.3</title>
     <link rel="manifest" href="manifest.json">
     <style>
         :root {
             --primary: #007bff; --success: #28a745; --info: #17a2b8;
-            --warning: #ffc107; --danger: #dc3545; --dark: #212529; --bg: #f0f2f5;
+            --warning: #ffc107; --danger: #dc3545; --dark: #212529; --bg: #f8f9fa;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding-bottom: 80px; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; color: #333; }
         
-        /* Dashboard Sticky */
-        .sticky-container { position: sticky; top: 0; z-index: 2000; background: var(--dark); color: white; padding: 10px 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 5px; }
-        .stat-box { text-align: center; background: rgba(255,255,255,0.1); padding: 10px 2px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
-        .stat-box small { font-size: 0.6em; text-transform: uppercase; display: block; opacity: 0.7; margin-bottom: 4px; }
-        .stat-box strong { font-size: 0.85em; color: var(--warning); }
+        /* Fixed Header Strategy to prevent overlapping */
+        .sticky-container { position: sticky; top: 0; z-index: 2000; background: var(--dark); color: white; padding: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+        .stat-box { text-align: center; background: rgba(255,255,255,0.1); padding: 8px 2px; border-radius: 8px; }
+        .stat-box small { font-size: 0.65em; display: block; opacity: 0.8; margin-bottom: 2px; }
+        .stat-box strong { font-size: 0.9em; color: var(--warning); white-space: nowrap; }
 
-        .tabs { display: flex; gap: 8px; padding: 10px 10px 0; }
-        .tab-btn { flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.15); color: white; border-radius: 8px 8px 0 0; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .tab-btn.active { background: var(--primary); }
+        .tabs { display: flex; gap: 8px; }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.1); color: white; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .tab-btn.active { background: var(--primary); box-shadow: inset 0 -3px 0 rgba(0,0,0,0.2); }
 
-        .view { display: none; padding: 15px; }
+        .view { display: none; padding: 15px; animation: fadeIn 0.3s; }
         .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Inventory Cards */
-        #list { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 15px; }
-        .card { background: white; border-radius: 15px; display: flex; flex-direction: column; border: 1px solid #ddd; overflow: hidden; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .card.low-stock { background-color: #fff9e6; border-color: var(--warning); }
-        .card.out-of-stock { background-color: #ffe6e6; border-color: var(--danger); }
-        .sold-out-badge { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); color: var(--danger); border: 4px double var(--danger); padding: 5px 15px; font-weight: 900; z-index: 10; background: rgba(255,255,255,0.9); pointer-events: none; }
+        /* Inventory Styling */
+        #list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+        .card { background: white; border-radius: 12px; border: 1px solid #dee2e6; overflow: hidden; position: relative; transition: transform 0.2s; }
+        .card.low-stock { background-color: #fffdf0; border: 2px solid var(--warning); }
+        .card.out-of-stock { background-color: #fff5f5; border: 2px solid var(--danger); opacity: 0.9; }
+        .sold-out-badge { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); color: var(--danger); border: 3px solid var(--danger); padding: 5px 10px; font-weight: 900; background: rgba(255,255,255,0.9); z-index: 5; }
 
-        .card-header { padding: 12px; font-weight: bold; background: rgba(0,0,0,0.03); text-align: center; font-size: 0.9em; }
-        .card-body { padding: 15px; flex-grow: 1; text-align: center; }
-        .price-tag { font-size: 1.2em; font-weight: 800; color: var(--success); display: block; }
-        .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 10px; background: #f8f9fa; }
-        .act-btn { padding: 8px 2px; border: none; border-radius: 6px; font-size: 0.7em; font-weight: bold; color: white; cursor: pointer; }
+        .card-header { padding: 10px; font-weight: bold; background: #f1f3f5; font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-body { padding: 12px; text-align: center; }
+        .price-tag { font-size: 1.1em; font-weight: 800; color: var(--success); display: block; }
+        .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px; background: #f8f9fa; }
+        .act-btn { padding: 6px 2px; border: none; border-radius: 4px; font-size: 0.7em; font-weight: bold; color: white; cursor: pointer; }
 
         /* Form Labels & Prefixes */
         .field-group { margin-bottom: 12px; }
-        .field-label { display: block; font-size: 0.7em; font-weight: bold; color: #666; margin-bottom: 4px; text-transform: uppercase; }
+        .field-label { display: block; font-size: 0.75em; font-weight: bold; color: #555; margin-bottom: 4px; }
         .input-wrapper { position: relative; display: flex; align-items: center; }
-        .input-wrapper::before { content: '₱'; position: absolute; left: 12px; color: #888; font-weight: bold; }
-        .input-wrapper input { padding-left: 30px !important; }
-        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
+        .input-wrapper::before { content: '₱'; position: absolute; left: 10px; font-weight: bold; color: #adb5bd; }
+        .input-wrapper input { padding-left: 25px !important; }
+        input { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 8px; font-size: 1em; }
 
-        /* Checkout */
-        .sticky-search { position: sticky; top: 130px; z-index: 100; background: var(--bg); padding-bottom: 10px; }
-        .cash-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 15px 0; }
-        .cash-btn { padding: 12px; border: 1px solid #ccc; background: white; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        /* Checkout Table */
+        .sticky-search { position: sticky; top: 125px; z-index: 100; background: var(--bg); padding: 10px 0; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; font-size: 0.9em; }
+        th { background: #e9ecef; padding: 12px; text-align: left; font-size: 0.8em; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
 
-        .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding: 20px; }
-        .receipt { background: white; padding: 25px; border-radius: 12px; font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 320px; }
+        .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; }
+        .receipt { background: white; padding: 20px; border-radius: 12px; font-family: monospace; width: 90%; max-width: 300px; }
 
-        .logout-btn { position: fixed; bottom: 15px; left: 15px; font-size: 0.7em; background: white; border: 1px solid #ddd; padding: 6px 12px; border-radius: 20px; color: #888; cursor: pointer; }
-        
+        .logout-btn { position: fixed; bottom: 15px; left: 15px; font-size: 0.7em; background: #eee; border: none; padding: 8px 15px; border-radius: 20px; z-index: 1000; }
         .syncing { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <div id="setup" style="display:none; position:fixed; inset:0; background:white; z-index:5000; padding:40px; text-align:center;">
-        <h2 style="margin-top:20%">Manager Pro Setup</h2>
-        <input type="password" id="ghToken" placeholder="GitHub Token" style="margin-bottom:10px;">
-        <input type="text" id="ghRepo" placeholder="username/repo" style="margin-bottom:20px;">
-        <button onclick="saveConfig()" style="width:100%; padding:15px; background:var(--primary); color:white; border:none; border-radius:8px;">Start App</button>
+    <div id="setup" style="display:none; position:fixed; inset:0; background:white; z-index:5000; padding:40px;">
+        <h2 style="text-align:center">Manager Pro Setup</h2>
+        <p style="font-size: 0.8em; color: #666;">Connect your GitHub Repo to go Live</p>
+        <input type="password" id="ghToken" placeholder="GitHub Personal Access Token" style="margin-bottom:15px;">
+        <input type="text" id="ghRepo" placeholder="username/repository-name" style="margin-bottom:20px;">
+        <button onclick="saveConfig()" style="width:100%; padding:15px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold;">Initialize App</button>
     </div>
 
     <div id="app">
@@ -86,13 +88,13 @@
 
         <div id="viewPos" class="view active">
             <div class="sticky-search">
-                <input type="text" id="posSearch" placeholder="🔍 Search item name..." oninput="renderPOS()">
+                <input type="text" id="posSearch" placeholder="🔍 Search items..." oninput="renderPOS()">
             </div>
-            <div style="background:white; border-radius:12px; overflow:hidden; border:1px solid #ddd; margin-bottom:20px;">
-                <table style="width:100%; border-collapse:collapse;">
-                    <thead style="background:#f8f9fa; font-size:0.8em; border-bottom:1px solid #eee;">
+            <div style="margin-bottom:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <table>
+                    <thead>
                         <tr>
-                            <th style="padding:12px; text-align:left;">Item</th>
+                            <th>Item</th>
                             <th>Price</th>
                             <th>Stock</th>
                             <th>Action</th>
@@ -102,59 +104,58 @@
                 </table>
             </div>
             
-            <div id="cartSection" style="background:white; padding:15px; border-radius:15px; border:1px solid #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-                <h4 style="margin:0 0 10px 0;">Current Cart</h4>
-                <div id="cartList" style="min-height:40px; border-bottom:1px solid #eee; margin-bottom:10px;"></div>
-                <div id="grandTotal" style="font-size:1.8em; font-weight:bold; text-align:right;">₱0.00</div>
+            <div id="cartSection" style="background:white; padding:15px; border-radius:12px; border:1px solid #ddd;">
+                <h4 style="margin:0 0 10px 0;">Cart</h4>
+                <div id="cartList" style="min-height:20px; margin-bottom:10px;"></div>
+                <div id="grandTotal" style="font-size:1.6em; font-weight:bold; text-align:right; border-top: 2px solid #eee; padding-top:10px;">₱0.00</div>
                 
-                <div class="cash-btns">
-                    <button class="cash-btn" onclick="quickCash(20)">₱20</button>
-                    <button class="cash-btn" onclick="quickCash(50)">₱50</button>
-                    <button class="cash-btn" onclick="quickCash(100)">₱100</button>
-                    <button class="cash-btn" onclick="quickCash(500)">₱500</button>
-                    <button class="cash-btn" onclick="quickCash(1000)">₱1k</button>
-                    <button class="cash-btn" onclick="document.getElementById('amtPaid').value=''">CLR</button>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 15px 0;">
+                    <button class="tab-btn" style="background:#e9ecef; color:#333; padding:8px 0;" onclick="quickCash(20)">20</button>
+                    <button class="tab-btn" style="background:#e9ecef; color:#333;" onclick="quickCash(50)">50</button>
+                    <button class="tab-btn" style="background:#e9ecef; color:#333;" onclick="quickCash(100)">100</button>
+                    <button class="tab-btn" style="background:#e9ecef; color:#333;" onclick="quickCash(500)">500</button>
+                    <button class="tab-btn" style="background:#e9ecef; color:#333;" onclick="quickCash(1000)">1k</button>
                 </div>
 
-                <div class="field-label">Cash Received</div>
-                <div class="input-wrapper"><input type="number" id="amtPaid" placeholder="0.00" oninput="calcPayment()" step="0.01"></div>
-                <div id="payStatus" style="padding:12px; text-align:center; border-radius:8px; margin:10px 0; font-weight:bold; background:#f8f9fa;">Enter Payment</div>
-                <button id="confirmBtn" disabled onclick="completeSale()" style="width:100%; padding:18px; background:var(--success); color:white; border:none; border-radius:12px; font-weight:bold; font-size:1.1em; opacity:0.4;">CONFIRM SALE</button>
+                <div class="field-label">Payment Received</div>
+                <div class="input-wrapper"><input type="number" id="amtPaid" placeholder="0.00" oninput="calcPayment()" step="0.01" min="0"></div>
+                <div id="payStatus" style="padding:10px; text-align:center; border-radius:8px; margin:10px 0; font-weight:bold; background:#f8f9fa; font-size:0.9em;">---</div>
+                <button id="confirmBtn" disabled onclick="completeSale()" style="width:100%; padding:15px; background:var(--success); color:white; border:none; border-radius:10px; font-weight:bold; font-size:1em; opacity:0.3;">CONFIRM SALE</button>
             </div>
         </div>
 
         <div id="viewInv" class="view">
-            <div style="background:white; padding:20px; border-radius:15px; border:1px solid #ddd; margin-bottom:25px;">
-                <h3 id="formTitle" style="margin-top:0;">Add New Product</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <div style="background:white; padding:15px; border-radius:12px; border:1px solid #ddd; margin-bottom:20px;">
+                <h3 id="formTitle" style="margin-top:0; font-size: 1.1em;">Add New Product</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                     <div class="field-group" style="grid-column: span 2;">
                         <span class="field-label">Product Name</span>
-                        <input type="text" id="name" placeholder="Ex: Coke 300ml">
+                        <input type="text" id="name" placeholder="Name">
                     </div>
                     <div class="field-group">
                         <span class="field-label">Cost per Pack</span>
-                        <div class="input-wrapper"><input type="number" id="cost" oninput="calcRec()" step="0.01"></div>
+                        <div class="input-wrapper"><input type="number" id="cost" oninput="calcRec()" step="0.01" min="0"></div>
                     </div>
                     <div class="field-group">
-                        <span class="field-label">Pc per Pack</span>
-                        <input type="number" id="qty" oninput="calcRec()">
+                        <span class="field-label">Pcs per Pack</span>
+                        <input type="number" id="qty" oninput="calcRec()" min="1">
                     </div>
                     <div class="field-group">
                         <span class="field-label">Markup %</span>
-                        <input type="number" id="markup" value="15" oninput="calcRec()">
+                        <input type="number" id="markup" value="15" oninput="calcRec()" min="0">
                     </div>
                     <div class="field-group">
                         <span class="field-label">Selling Price</span>
-                        <div class="input-wrapper"><input type="number" id="sell" step="0.01"></div>
+                        <div class="input-wrapper"><input type="number" id="sell" step="0.01" min="0"></div>
                     </div>
                 </div>
-                <div style="background:#eef6ff; padding:10px; border-radius:8px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.85em;">Recommended Price: <strong id="recVal">₱0.00</strong></span>
-                    <button onclick="useRec()" style="background:var(--primary); color:white; border:none; border-radius:4px; padding:4px 10px; font-size:0.8em; cursor:pointer;">USE</button>
+                <div style="background:#eef6ff; padding:8px; border-radius:6px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.75em;">Recommended: <strong id="recVal">₱0.00</strong></span>
+                    <button onclick="useRec()" style="background:var(--primary); color:white; border:none; border-radius:4px; padding:4px 8px; font-size:0.7em;">USE</button>
                 </div>
                 <div style="display:flex; gap:10px;">
-                    <button onclick="addItem()" id="mainBtn" style="flex:1; padding:15px; background:var(--primary); color:white; border:none; border-radius:10px; font-weight:bold;">SAVE PRODUCT</button>
-                    <button onclick="clearForm()" style="flex:1; padding:15px; background:#6c757d; color:white; border:none; border-radius:10px; font-weight:bold;">CANCEL</button>
+                    <button onclick="addItem()" id="mainBtn" style="flex:2; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold;">SAVE PRODUCT</button>
+                    <button onclick="clearForm()" style="flex:1; padding:12px; background:#6c757d; color:white; border:none; border-radius:8px; font-weight:bold;">CANCEL</button>
                 </div>
             </div>
             <div id="list"></div>
@@ -163,24 +164,24 @@
 
     <div id="receiptModal" class="modal">
         <div class="receipt">
-            <div id="receiptContent" style="white-space:pre-wrap; margin-bottom:20px; font-size:0.9em;"></div>
-            <button onclick="closeReceipt()" style="width:100%; padding:15px; background:var(--dark); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">CLOSE</button>
+            <div id="receiptContent" style="white-space:pre-wrap; font-size:0.85em; line-height:1.4;"></div>
+            <button onclick="closeReceipt()" style="width:100%; padding:12px; background:var(--dark); color:white; border:none; border-radius:8px; margin-top:15px; font-weight:bold;">DONE</button>
         </div>
     </div>
 
-    <div style="position:fixed; bottom:20px; right:20px; display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
-        <span id="syncStatus" style="background:rgba(0,0,0,0.7); color:white; padding:4px 8px; border-radius:5px; font-size:10px;">Checking...</span>
-        <button id="cloudBtn" onclick="syncToCloud()" style="width:55px; height:55px; border-radius:50%; background:var(--success); border:none; color:white; font-size:24px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">☁️</button>
+    <div style="position:fixed; bottom:20px; right:20px; display:flex; flex-direction:column; align-items:flex-end; gap:8px; z-index: 3000;">
+        <span id="syncStatus" style="background:rgba(0,0,0,0.8); color:white; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:bold;">Checking...</span>
+        <button id="cloudBtn" onclick="syncToCloud()" style="width:50px; height:50px; border-radius:50%; background:var(--success); border:none; color:white; font-size:20px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">☁️</button>
     </div>
 
-    <button class="logout-btn" onclick="logout()">Logout</button>
+    <button class="logout-btn" onclick="logout()">Logout / Reset</button>
 
     <script>
         let inventory = [], salesHistory = [], cart = [], editingIndex = -1, isDirty = false;
         const config = JSON.parse(localStorage.getItem('inv_config'));
 
-        // Safety Alert
-        window.onbeforeunload = () => isDirty ? "Unsaved changes!" : null;
+        // Prevent accidental loss
+        window.onbeforeunload = (e) => { if(isDirty) return "You have unsaved changes!"; };
 
         if (!config) document.getElementById('setup').style.display = 'block';
         else fetchData();
@@ -196,9 +197,9 @@
         }
 
         function calcRec() {
-            const c = parseFloat(document.getElementById('cost').value) || 0;
-            const q = parseFloat(document.getElementById('qty').value) || 1;
-            const m = parseFloat(document.getElementById('markup').value) || 0;
+            const c = Math.max(0, parseFloat(document.getElementById('cost').value) || 0);
+            const q = Math.max(1, parseInt(document.getElementById('qty').value) || 1);
+            const m = Math.max(0, parseFloat(document.getElementById('markup').value) || 0);
             const r = (c / q) * (1 + (m / 100));
             document.getElementById('recVal').innerText = formatPHP(r);
             return r;
@@ -210,19 +211,24 @@
         }
 
         function addItem() {
-            const n = document.getElementById('name').value;
+            const n = document.getElementById('name').value.trim();
             const c = parseFloat(document.getElementById('cost').value) || 0;
             const q = parseInt(document.getElementById('qty').value) || 0;
             const s = parseFloat(document.getElementById('sell').value) || 0;
 
-            if(!n || q <= 0 || s <= 0) return alert("Values must be positive!");
-            if(q > 50) return alert("Max stock threshold per entry is 50!");
+            if(!n || q <= 0 || s <= 0) return alert("Product Name, Stock, and Price are required!");
+            if(q > 50 && editingIndex === -1) return alert("Initial stock cannot exceed 50 per item entry.");
 
             const unitCost = c / q;
-            const item = { name: n, unitCost, qty: q, sell: s };
+            const item = { name: n, unitCost: unitCost || 0, qty: q, sell: s };
 
-            if(editingIndex > -1) inventory[editingIndex] = item;
-            else inventory.push(item);
+            if(editingIndex > -1) {
+                // If editing, we preserve the original unitCost if the cost field was left 0
+                if(c === 0) item.unitCost = inventory[editingIndex].unitCost;
+                inventory[editingIndex] = item;
+            } else {
+                inventory.push(item);
+            }
 
             isDirty = true; saveLocal(); clearForm(); render();
         }
@@ -242,13 +248,13 @@
                     <div class="card-body">
                         <span class="price-tag">${formatPHP(item.sell)}</span>
                         <small>Stock: <b>${item.qty}</b></small><br>
-                        <small style="font-size:0.65em; color:#666;">Unit Cost: ${formatPHP(item.unitCost)} | Profit: ${formatPHP(item.sell - item.unitCost)}</small>
+                        <small style="font-size:0.6em; color:#666;">Cost: ${formatPHP(item.unitCost)} | Prof: ${formatPHP(item.sell - item.unitCost)}</small>
                     </div>
                     <div class="card-actions">
                         <button class="act-btn" style="background:var(--info)" onclick="editItem(${i})">Edit</button>
                         <button class="act-btn" style="background:var(--dark)" onclick="copyItem(${i})">Copy</button>
                         <button class="act-btn" style="background:var(--primary)" onclick="restock(${i})">Restock</button>
-                        <button class="act-btn" style="background:var(--danger)" onclick="deleteItem(${i})">Delete</button>
+                        <button class="act-btn" style="background:var(--danger)" onclick="deleteItem(${i})">Del</button>
                     </div>
                 </div>`;
             }).join('');
@@ -262,20 +268,20 @@
             const b = document.getElementById('posBody');
             b.innerHTML = inventory.filter(i => i.name.toLowerCase().includes(s)).map(i => {
                 const idx = inventory.indexOf(i);
-                return `<tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:12px; font-weight:bold;">${i.name}</td>
-                    <td align="center">${formatPHP(i.sell)}</td>
+                return `<tr>
+                    <td><b>${i.name}</b></td>
+                    <td>${formatPHP(i.sell)}</td>
                     <td align="center">${i.qty}</td>
-                    <td align="center"><button onclick="addToCart(${idx})" ${i.qty <= 0 ? 'disabled' : ''} style="background:var(--primary); color:white; border:none; border-radius:4px; padding:6px 12px; cursor:pointer;">+ Add</button></td>
+                    <td><button onclick="addToCart(${idx})" ${i.qty <= 0 ? 'disabled' : ''} style="background:var(--primary); color:white; border:none; border-radius:4px; padding:6px 10px;">+ Add</button></td>
                 </tr>`;
             }).join('');
         }
 
         function addToCart(idx) {
-            const q = prompt("How many to buy?", "1");
-            if(!q) return;
+            const q = prompt(`Buying ${inventory[idx].name}. How many?`, "1");
+            if(!q || isNaN(q) || parseInt(q) <= 0) return;
             const n = parseInt(q);
-            if(n > inventory[idx].qty) return alert("Not enough stock!");
+            if(n > inventory[idx].qty) return alert("Insufficient stock!");
             
             const existing = cart.find(c => c.idx === idx);
             if(existing) existing.buyQty += n;
@@ -288,7 +294,7 @@
             let total = 0;
             cL.innerHTML = cart.map((c, i) => {
                 total += (c.sell * c.buyQty);
-                return `<div style="display:flex; justify-content:space-between; padding:5px 0; font-size:0.9em;">
+                return `<div style="display:flex; justify-content:space-between; padding:4px 0; font-size:0.85em;">
                     <span>${c.name} x${c.buyQty}</span>
                     <b>${formatPHP(c.sell * c.buyQty)}</b>
                 </div>`;
@@ -299,7 +305,7 @@
 
         function quickCash(v) {
             const i = document.getElementById('amtPaid');
-            i.value = ((parseFloat(i.value) || 0) + v).toFixed(2);
+            i.value = ( (parseFloat(i.value) || 0) + v ).toFixed(2);
             calcPayment();
         }
 
@@ -309,12 +315,12 @@
             const btn = document.getElementById('confirmBtn');
             const stat = document.getElementById('payStatus');
 
-            if(total === 0) { btn.disabled = true; btn.style.opacity = 0.4; stat.innerText = "Cart Empty"; return; }
+            if(total === 0) { btn.disabled = true; btn.style.opacity = 0.3; stat.innerText = "Cart Empty"; return; }
 
             if(paid < total) {
                 stat.innerText = "Short: " + formatPHP(total - paid);
                 stat.style.color = "var(--danger)";
-                btn.disabled = true; btn.style.opacity = 0.4;
+                btn.disabled = true; btn.style.opacity = 0.3;
             } else {
                 stat.innerText = "Change: " + formatPHP(paid - total);
                 stat.style.color = "var(--success)";
@@ -325,7 +331,7 @@
         function completeSale() {
             const total = cart.reduce((a, b) => a + (b.sell * b.buyQty), 0);
             const paid = parseFloat(document.getElementById('amtPaid').value) || 0;
-            let receipt = `*** MANAGER PRO ***\n${new Date().toLocaleString()}\n--------------------------\n`;
+            let receipt = `*** RECEIPT ***\n${new Date().toLocaleString()}\n--------------------------\n`;
             
             cart.forEach(c => {
                 const item = inventory[c.idx];
@@ -335,10 +341,10 @@
                     date: new Date().toISOString()
                 });
                 item.qty -= c.buyQty;
-                receipt += `${c.name.substring(0,15).padEnd(15)} x${c.buyQty} ${formatPHP(c.sell*c.buyQty)}\n`;
+                receipt += `${c.name.substring(0,14).padEnd(14)} x${c.buyQty} ${formatPHP(c.sell*c.buyQty).padStart(8)}\n`;
             });
 
-            receipt += `--------------------------\nTOTAL:  ${formatPHP(total)}\nCASH:   ${formatPHP(paid)}\nCHANGE: ${formatPHP(paid-total)}\n--------------------------\nTHANK YOU!`;
+            receipt += `--------------------------\nTOTAL:   ${formatPHP(total).padStart(17)}\nCASH:    ${formatPHP(paid).padStart(17)}\nCHANGE:  ${formatPHP(paid-total).padStart(17)}\n--------------------------\nTHANK YOU!`;
             document.getElementById('receiptContent').innerText = receipt;
             document.getElementById('receiptModal').style.display = 'flex';
             
@@ -359,13 +365,15 @@
                 const put = await fetch(url, {
                     method: 'PUT',
                     headers,
-                    body: JSON.stringify({ message: "AutoSync", content, sha: sha || undefined })
+                    body: JSON.stringify({ message: "Sync " + new Date().toISOString(), content, sha: sha || undefined })
                 });
                 if(put.ok) {
                     isDirty = false;
-                    document.getElementById('syncStatus').innerText = "Last Synced: " + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                }
-            } catch (e) { console.error(e); }
+                    document.getElementById('syncStatus').innerText = "Saved: " + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                } else { throw new Error(); }
+            } catch (e) { 
+                document.getElementById('syncStatus').innerText = "Sync Failed!"; 
+            }
             btn.classList.remove('syncing');
         }
 
@@ -379,7 +387,9 @@
                     const c = JSON.parse(decodeURIComponent(escape(atob(d.content))));
                     inventory = c.inventory || [];
                     salesHistory = c.salesHistory || [];
-                    document.getElementById('syncStatus').innerText = "Cloud Active";
+                    document.getElementById('syncStatus').innerText = "Cloud Synced";
+                } else {
+                    throw new Error("File missing");
                 }
             } catch (e) {
                 inventory = JSON.parse(localStorage.getItem('cache_inv')) || [];
@@ -407,7 +417,8 @@
             const item = inventory[i];
             document.getElementById('name').value = item.name;
             document.getElementById('qty').value = item.qty;
-            document.getElementById('sell').value = item.sell;
+            document.getElementById('sell').value = item.sell.toFixed(2);
+            document.getElementById('cost').value = ''; // Reset cost input for edit to prevent accidental cost changes
             document.getElementById('formTitle').innerText = "Edit Product";
             window.scrollTo(0,0);
         }
@@ -417,34 +428,44 @@
             const item = inventory[i];
             document.getElementById('name').value = item.name + " (Copy)";
             document.getElementById('qty').value = item.qty;
-            document.getElementById('sell').value = item.sell;
+            document.getElementById('sell').value = item.sell.toFixed(2);
+            document.getElementById('cost').value = (item.unitCost * item.qty).toFixed(2);
             document.getElementById('formTitle').innerText = "Copy Product";
             window.scrollTo(0,0);
         }
 
         function restock(i) {
-            const q = prompt("Enter additional pieces:");
-            if(q) { inventory[i].qty += parseInt(q); isDirty = true; saveLocal(); render(); }
+            const q = prompt(`Restocking ${inventory[i].name}. Add how many pieces?`);
+            if(!q || isNaN(q)) return;
+            const add = parseInt(q);
+            if(add < 0) return alert("No negative numbers!");
+            inventory[i].qty += add;
+            isDirty = true; saveLocal(); render();
         }
 
-        function deleteItem(i) { if(confirm("Delete item?")) { inventory.splice(i,1); isDirty = true; saveLocal(); render(); } }
+        function deleteItem(i) { if(confirm(`Delete ${inventory[i].name}?`)) { inventory.splice(i,1); isDirty = true; saveLocal(); render(); } }
         function closeReceipt() { document.getElementById('receiptModal').style.display = 'none'; }
+        
         function updateDash() {
             const s = salesHistory.reduce((a, b) => a + b.rev, 0);
             const p = salesHistory.reduce((a, b) => a + b.prof, 0);
             document.getElementById('weeklySales').innerText = formatPHP(s);
             document.getElementById('weeklyProfit').innerText = formatPHP(p);
         }
+
         function saveConfig() {
-            const token = document.getElementById('ghToken').value;
-            const repo = document.getElementById('ghRepo').value;
+            const token = document.getElementById('ghToken').value.trim();
+            const repo = document.getElementById('ghRepo').value.trim();
             if(token && repo) {
                 localStorage.setItem('inv_config', JSON.stringify({token, repo}));
                 location.reload();
-            }
+            } else { alert("Both Token and Repo name are required!"); }
         }
-        function logout() { if(confirm("Logout and clear cache?")) { localStorage.clear(); location.reload(); } }
-        setInterval(() => { if(isDirty) syncToCloud(); }, 300000); // 5 min
+
+        function logout() { if(confirm("Clear config and cache? You will need to re-login.")) { localStorage.clear(); location.reload(); } }
+        
+        // Auto Sync Logic
+        setInterval(() => { if(isDirty && config) syncToCloud(); }, 300000); 
     </script>
 </body>
 </html>
