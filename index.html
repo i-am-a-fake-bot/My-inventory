@@ -6,6 +6,7 @@
     <title>Manager Pro</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#212529">
+
     <style>
         :root {
             --primary: #007bff; --success: #28a745; --info: #17a2b8;
@@ -13,45 +14,80 @@
         }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; }
         
-        /* Layout Fix: Side by Side POS */
-        .pos-grid { display: flex; gap: 20px; align-items: flex-start; padding: 15px; }
-        .pos-inventory-side { flex: 1.5; }
-        .pos-cart-side { flex: 1; position: sticky; top: 135px; background: white; padding: 20px; border-radius: 12px; border: 1px solid #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        
-        @media (max-width: 768px) { .pos-grid { flex-direction: column; } .pos-cart-side { position: static; width: 100%; box-sizing: border-box; } }
-
-        .sticky-container { position: sticky; top: 0; z-index: 2000; background: var(--dark); color: white; padding: 10px 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .sticky-container {
+            position: sticky; top: 0; z-index: 2000;
+            background: var(--dark); color: white;
+            padding: 10px 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 5px; }
         .stat-box { text-align: center; background: rgba(255,255,255,0.1); padding: 8px 2px; border-radius: 5px; }
-        .stat-box small { font-size: 0.55em; text-transform: uppercase; display: block; opacity: 0.8; }
+        .stat-box small { font-size: 0.55em; text-transform: uppercase; display: block; opacity: 0.8; letter-spacing: 0.5px; }
         .stat-box strong { font-size: 0.85em; color: var(--warning); }
+
         .tabs { display: flex; gap: 5px; padding: 10px 10px 0; }
         .tab-btn { flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.1); color: white; border-radius: 5px; font-weight: bold; cursor: pointer; }
         .tab-btn.active { background: var(--primary); }
+
         .view { display: none; padding: 15px; }
         .view.active { display: block; }
+
         #list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-        .card { background: white; border-radius: 12px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; position: relative; }
-        .card.low-stock { background: #fff3cd !important; }
-        .card.out-of-stock { background: #f8d7da !important; }
-        .sold-out-badge { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-20deg); color: #dc3545; font-weight: 900; font-size: 1.2rem; border: 4px double #dc3545; display: none; text-transform: uppercase; opacity: 0.8; }
+        .card { background: white; border-radius: 12px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; position: relative; transition: 0.2s; }
+        
+        /* 1d. Stock Alert Colors */
+        .card.low-stock { background: #fff3cd !important; border-color: #ffeeba; }
+        .card.out-of-stock { background: #f8d7da !important; border-color: #f5c6cb; }
+        
+        .sold-out-badge { 
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-20deg);
+            background: none; color: #dc3545; padding: 5px 10px; font-weight: 900; font-size: 1.2rem;
+            border: 4px double #dc3545; z-index: 10; display: none; text-transform: uppercase;
+            letter-spacing: 2px; opacity: 0.8; pointer-events: none;
+        }
         .card.out-of-stock .sold-out-badge { display: block; }
-        .price-tag { font-size: 1.2em; font-weight: 800; color: var(--success); }
+
+        .card-header { padding: 10px; font-weight: bold; background: rgba(0,0,0,0.03); text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .card-body { padding: 12px; flex-grow: 1; text-align: center; }
+        .price-tag { font-size: 1.2em; font-weight: 800; color: var(--success); display: block; }
+        
         .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px; background: rgba(0,0,0,0.05); }
         .act-btn { padding: 8px 2px; border: none; border-radius: 4px; font-size: 0.7em; font-weight: bold; color: white; cursor: pointer; }
+
+        .pos-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; }
+        @media (max-width: 768px) { .pos-grid { grid-template-columns: 1fr; } }
+        
+        .sticky-search { position: sticky; top: 115px; z-index: 1000; background: var(--bg); padding: 5px 0; }
+
+        .cash-presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 10px 0; }
+        .cash-btn { padding: 10px 2px; border: 1px solid #ddd; border-radius: 5px; background: white; font-size: 0.75em; font-weight: bold; cursor: pointer; }
+
+        .pay-status { padding: 12px; border-radius: 8px; font-weight: bold; text-align: center; margin: 10px 0; border: 1px solid #ddd; }
+
+        .field-group { margin-bottom: 5px; }
+        .field-group label { display: block; font-size: 0.65em; font-weight: bold; color: #666; text-transform: uppercase; margin-left: 5px; }
+        
         .input-wrapper { position: relative; }
         .input-wrapper::before { content: '₱'; position: absolute; left: 10px; top: 12px; font-size: 0.9em; color: #666; }
-        .input-wrapper input { padding-left: 25px; width: 100%; box-sizing: border-box; padding-top: 12px; padding-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; margin: 2px 0 8px 0;}
-        .field-group input { width: 100%; padding: 12px; margin: 2px 0 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        .input-wrapper input { padding-left: 25px; }
+
         .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 3000; }
         .fab { width: 50px; height: 50px; border-radius: 50%; border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
+        
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .syncing { animation: spin 1s linear infinite; }
+
         #setup { position: fixed; inset: 0; background: var(--bg); z-index: 5000; padding: 40px; text-align: center; display: none; }
+        input { width: 100%; padding: 12px; margin: 2px 0 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        
+        .rec-note { font-size: 0.7em; background: #e9ecef; padding: 5px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 10px;}
+        .use-btn { background: var(--primary); color: white; border: none; border-radius: 4px; padding: 2px 6px; font-size: 0.8em; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="setup">
         <h2 style="margin-top:20%;">Manager Pro</h2>
+        <p style="font-size:0.8em; color: #666;">Enter GitHub details to sync data.</p>
         <input type="password" id="ghToken" placeholder="GitHub Token">
         <input type="text" id="ghRepo" placeholder="username/repository">
         <button onclick="saveConfig()" style="width:100%; padding:15px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold;">CONNECT REPO</button>
@@ -73,8 +109,10 @@
 
         <div id="viewPos" class="view active">
             <div class="pos-grid">
-                <div class="pos-inventory-side">
-                    <input type="text" id="posSearch" placeholder="🔍 Search product..." oninput="renderPOS()" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd;">
+                <div>
+                    <div class="sticky-search">
+                        <input type="text" id="posSearch" placeholder="🔍 Search product..." oninput="renderPOS()">
+                    </div>
                     <table style="width:100%; border-collapse: collapse; background:white; border-radius:8px; overflow:hidden;">
                         <thead style="background:#eee; font-size: 0.8em;">
                             <tr><th style="padding:10px; text-align:left;">Item Name</th><th style="text-align:right; padding:10px;">Price</th><th style="padding:10px;">Stock</th><th></th></tr>
@@ -82,75 +120,101 @@
                         <tbody id="posBody"></tbody>
                     </table>
                 </div>
-                <div class="pos-cart-side">
+                <div style="background:white; padding:15px; border-radius:12px; height:fit-content; position: sticky; top: 135px; border:1px solid #ddd;">
                     <h3 style="margin:0">Cart</h3>
-                    <div id="cartList" style="margin:10px 0; border-bottom:1px solid #eee; max-height: 250px; overflow-y: auto;"></div>
-                    <div style="font-size:1.8em; font-weight:bold; text-align:right;" id="grandTotal">₱0.00</div>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 10px 0;">
-                        <button onclick="setCash(20)">₱20</button><button onclick="setCash(50)">₱50</button><button onclick="setCash(100)">₱100</button>
-                        <button onclick="setCash(500)">₱500</button><button onclick="setCash(1000)">₱1k</button>
+                    <div id="cartList" style="margin:10px 0; border-bottom:1px solid #eee; max-height: 200px; overflow-y: auto;"></div>
+                    <div style="font-size:1.5em; font-weight:bold; text-align:right;" id="grandTotal">₱0.00</div>
+                    
+                    <div class="cash-presets">
+                        <button class="cash-btn" onclick="setCash(20)">₱20.00</button>
+                        <button class="cash-btn" onclick="setCash(50)">₱50.00</button>
+                        <button class="cash-btn" onclick="setCash(100)">₱100.00</button>
+                        <button class="cash-btn" onclick="setCash(500)">₱500.00</button>
+                        <button class="cash-btn" onclick="setCash(1000)">₱1k</button>
                     </div>
                     <div class="input-wrapper">
-                        <input type="number" step="0.01" id="amtPaid" placeholder="Amount Paid" oninput="calcPayment()" onblur="this.value = parseFloat(this.value).toFixed(2)">
+                        <input type="number" step="0.01" id="amtPaid" placeholder="Amount Paid" oninput="calcPayment()">
                     </div>
-                    <div id="payStatus" style="padding:10px; text-align:center; font-weight:bold; background:#eee; margin-bottom:10px; border-radius:5px;">Enter Amount</div>
-                    <button onclick="completeSale()" style="width:100%; padding:18px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:1.1em;">CONFIRM SALE</button>
+                    <div id="payStatus" class="pay-status" style="background:#eee">Enter Amount</div>
+                    <button onclick="completeSale()" style="width:100%; padding:15px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Confirm</button>
                 </div>
             </div>
         </div>
 
         <div id="viewInv" class="view">
-            <div style="background:white; padding:15px; border-radius:12px; margin-bottom:20px; border: 1px solid #ddd;">
-                <h3 id="formTitle" style="margin:0 0 10px 0;">Add New Product</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                    <div style="grid-column: span 2;">
-                        <label style="font-size:0.7em; font-weight:bold;">PRODUCT NAME</label>
-                        <input type="text" id="name" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
+            <div id="formSection" style="background:white; padding:15px; border-radius:12px; margin-bottom:20px; border: 1px solid #ddd;">
+                <h3 id="formTitle" style="margin:0 0 10px 0; font-size: 1em;">Add New Product</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0 8px;">
+                    <div class="field-group" style="grid-column: span 2;">
+                        <label>Product Name</label>
+                        <input type="text" id="name" placeholder="e.g. Milo 22g">
                     </div>
-                    <div class="input-wrapper">
-                        <label style="font-size:0.7em; font-weight:bold;">COST</label>
-                        <input type="number" step="0.01" id="cost" oninput="calcRec()" onblur="this.value = parseFloat(this.value).toFixed(2)">
+                    <div class="field-group">
+                        <label>Cost</label>
+                        <div class="input-wrapper"><input type="number" step="0.01" id="cost" placeholder="0.00" oninput="calcRec()"></div>
                     </div>
-                    <div>
-                        <label style="font-size:0.7em; font-weight:bold;">QTY</label>
-                        <input type="number" id="qty" oninput="calcRec()" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
+                    <div class="field-group">
+                        <label>Qty</label>
+                        <input type="number" id="qty" placeholder="0" oninput="calcRec()">
                     </div>
-                    <div>
-                        <label style="font-size:0.7em; font-weight:bold;">MARKUP %</label>
-                        <input type="number" id="markup" value="12" oninput="calcRec()" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
+                    <div class="field-group">
+                        <label>Markup %</label>
+                        <input type="number" id="markup" value="12" oninput="calcRec()">
                     </div>
-                    <div class="input-wrapper">
-                        <label style="font-size:0.7em; font-weight:bold;">SELLING PRICE</label>
-                        <input type="number" step="0.01" id="sell" onblur="this.value = parseFloat(this.value).toFixed(2)">
+                    <div class="field-group">
+                        <label>Selling Price</label>
+                        <div class="input-wrapper"><input type="number" step="0.01" id="sell" placeholder="0.00"></div>
                     </div>
                 </div>
-                <div style="background:#f0f7ff; padding:10px; margin:10px 0; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.8em;">Recommended: <b id="recVal">₱0.00</b></span>
-                    <button onclick="useRec()" style="background:var(--primary); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">USE</button>
+                <div class="rec-note">
+                    <span>Recommended Price: <b id="recVal">₱0.00</b></span>
+                    <button class="use-btn" onclick="useRec()">USE</button>
                 </div>
-                <div style="display:flex; gap:10px;">
-                    <button onclick="addItem()" id="mainBtn" style="flex:2; padding:15px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold;">SAVE PRODUCT</button>
-                    <button onclick="clearForm()" style="flex:1; padding:15px; background:#6c757d; color:white; border:none; border-radius:8px;">CANCEL</button>
+                
+                <div style="display:flex; gap:8px; margin-top:5px;">
+                    <button onclick="addItem()" id="mainBtn" style="flex:1; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">SAVE PRODUCT</button>
+                    <button onclick="clearForm()" style="flex:1; padding:12px; background:#6c757d; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">CANCEL</button>
                 </div>
             </div>
+
+            <input type="text" id="searchBar" placeholder="🔍 Search inventory..." oninput="render()" style="margin-bottom:15px;">
             <div id="list"></div>
+
+            <button onclick="logout()" style="width:100%; margin-top:30px; padding:12px; background:none; border: 1px solid var(--danger); color:var(--danger); border-radius:8px; font-weight:bold;">LOGOUT</button>
         </div>
 
         <div class="fab-container">
-            <span id="syncStatus" style="font-size: 10px; background: black; color: white; padding: 2px 8px; border-radius: 20px; text-align: center;">Cloud Status: ---</span>
-            <button class="fab" style="background:#6c757d" onclick="fetchData()">🔄</button>
-            <button class="fab" id="cloudBtn" style="background:var(--success)" onclick="syncToCloud()">☁️</button>
+            <span id="syncStatus" style="font-size: 10px; background: black; color: white; padding: 2px 8px; border-radius: 20px; text-align: center;">Cloud Last Synced: ---</span>
+            <button class="fab" style="background:#6c757d" title="Refresh" onclick="fetchData()">🔄</button>
+            <button class="fab" id="cloudBtn" style="background:var(--success)" title="Sync to Repo (Cloud)" onclick="syncToCloud()">☁️</button>
         </div>
     </div>
 
     <script>
-        let inventory = [], salesHistory = [], cart = [], editingIndex = -1, isDirty = false;
+        let inventory = [];
+        let salesHistory = [];
+        let cart = [];
+        let editingIndex = -1;
+        let isDirty = false;
         let config = JSON.parse(localStorage.getItem('inv_config'));
 
-        if (!config) { document.getElementById('setup').style.display = 'block'; document.getElementById('app').style.display = 'none'; } 
-        else { fetchData(); }
+        // Handle initial login check
+        if (!config) { 
+            document.getElementById('setup').style.display = 'block'; 
+            document.getElementById('app').style.display = 'none';
+        } else { 
+            fetchData(); 
+        }
 
-        function formatPHP(num) { return '₱' + parseFloat(num || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+        // 11. Page refresh warning
+        window.addEventListener('beforeunload', (e) => {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes!';
+            }
+        });
+
+        function formatPHP(num) { return '₱' + parseFloat(num).toFixed(2); }
 
         function switchTab(tab) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -168,8 +232,10 @@
             document.getElementById('recVal').innerText = formatPHP(currentRec);
             return currentRec;
         }
-
-        function useRec() { document.getElementById('sell').value = calcRec().toFixed(2); }
+        function useRec() { 
+            const val = calcRec();
+            document.getElementById('sell').value = val.toFixed(2); 
+        }
 
         function clearForm() {
             editingIndex = -1;
@@ -181,30 +247,38 @@
 
         function render() {
             const listDiv = document.getElementById('list');
-            let sumCost = 0, sumSell = 0;
+            const search = document.getElementById('searchBar').value.toLowerCase();
+            let sumCost = 0; let sumSell = 0;
+
             inventory.forEach(item => {
                 sumCost += parseFloat(item.cost) || 0;
                 sumSell += (parseFloat(item.sell) * item.qty) || 0;
             });
+
             document.getElementById('totalCost').innerText = formatPHP(sumCost);
             document.getElementById('totalSell').innerText = formatPHP(sumSell);
 
-            listDiv.innerHTML = inventory.map((item, idx) => {
+            const filtered = inventory.filter(i => i.name.toLowerCase().includes(search));
+            listDiv.innerHTML = filtered.map((item) => {
+                const actualIdx = inventory.indexOf(item);
                 const unitCost = item.cost / (item.qtyInitial || item.qty || 1);
+                const isLow = item.qty > 0 && item.qty <= 3;
+                const isOut = item.qty <= 0;
+
                 return `
-                <div class="card ${item.qty <= 3 ? 'low-stock' : ''} ${item.qty <= 0 ? 'out-of-stock' : ''}">
+                <div class="card ${isLow ? 'low-stock' : ''} ${isOut ? 'out-of-stock' : ''}">
                     <div class="sold-out-badge">SOLD OUT</div>
-                    <div style="padding:10px; font-weight:bold; text-align:center;">${item.name}</div>
-                    <div style="padding:10px; text-align:center; flex-grow:1;">
+                    <div class="card-header">${item.name}</div>
+                    <div class="card-body">
                         <span class="price-tag">${formatPHP(item.sell)}</span>
-                        <div style="font-size:0.7em;">Profit/pc: <span style="color:green">+${(item.sell - unitCost).toFixed(2)}</span></div>
-                        <div style="font-weight:bold;">Stock: ${item.qty}</div>
+                        <div style="font-size:0.75em; color:#666; margin-bottom:4px;">Profit: <span style="color:var(--success)">+${(item.sell - unitCost).toFixed(2)}</span></div>
+                        <div style="font-weight:bold; font-size: 0.9em;">Stock: ${item.qty}</div>
                     </div>
                     <div class="card-actions">
-                        <button class="act-btn" style="background:var(--info)" onclick="restockItem(${idx})">Stock</button>
-                        <button class="act-btn" style="background:var(--warning); color:black" onclick="editItem(${idx})">Edit</button>
-                        <button class="act-btn" style="background:var(--primary)" onclick="copyItem(${idx})">Copy</button>
-                        <button class="act-btn" style="background:var(--danger)" onclick="deleteItem(${idx})">Del</button>
+                        <button class="act-btn" style="background:var(--info)" onclick="restockItem(${actualIdx})">Restock</button>
+                        <button class="act-btn" style="background:var(--warning); color:black" onclick="editItem(${actualIdx})">Edit</button>
+                        <button class="act-btn" style="background:var(--primary)" onclick="copyItem(${actualIdx})">Copy</button>
+                        <button class="act-btn" style="background:var(--danger)" onclick="deleteItem(${actualIdx})">Delete</button>
                     </div>
                 </div>`;
             }).join('');
@@ -213,57 +287,76 @@
 
         function renderPOS() {
             const search = document.getElementById('posSearch').value.toLowerCase();
-            document.getElementById('posBody').innerHTML = inventory.filter(i => i.name.toLowerCase().includes(search)).map(item => {
+            const body = document.getElementById('posBody');
+            body.innerHTML = inventory.filter(i => i.name.toLowerCase().includes(search)).map(item => {
                 const idx = inventory.indexOf(item);
                 return `
                 <tr style="border-bottom:1px solid #eee; ${item.qty <= 0 ? 'opacity:0.3' : ''}">
-                    <td style="padding:10px;"><b>${item.name}</b></td>
-                    <td style="text-align:right;">${formatPHP(item.sell)}</td>
-                    <td style="text-align:center;">${item.qty}</td>
-                    <td style="text-align:right; padding:10px;"><button onclick="addToCart(${idx})" ${item.qty <= 0 ? 'disabled' : ''}>+ Add</button></td>
+                    <td style="padding:10px; font-size:0.9em;"><b>${item.name}</b></td>
+                    <td style="text-align:right; padding:10px;">${formatPHP(item.sell)}</td>
+                    <td style="text-align:center; padding:10px; font-weight:bold;">${item.qty}</td>
+                    <td style="text-align:right; padding:10px;">
+                        <button onclick="addToCart(${idx})" ${item.qty <= 0 ? 'disabled' : ''} style="background:var(--primary); color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">+ Add</button>
+                    </td>
                 </tr>`;
             }).join('');
         }
 
         function addToCart(idx) {
             const item = inventory[idx];
-            let count = prompt(`Qty for ${item.name}?`, "1");
-            if (!count || isNaN(count) || count <= 0) return;
+            let count = prompt(`How many "${item.name}" are being bought?`, "1");
+            if (count === null) return;
             count = parseInt(count);
-            if (count > item.qty) return alert("Low stock!");
+            if (isNaN(count) || count <= 0) return alert("Invalid quantity");
+            if (count > item.qty) return alert(`Only ${item.qty} left in stock!`);
+
             const inCart = cart.find(c => c.idx === idx);
-            if (inCart) inCart.buyQty += count; else cart.push({...item, buyQty: count, idx});
+            if (inCart) {
+                if (inCart.buyQty + count <= item.qty) inCart.buyQty += count;
+                else alert("Not enough stock for that total.");
+            } else { cart.push({...item, buyQty: count, idx: idx}); }
             renderCart();
         }
 
         function renderCart() {
+            const list = document.getElementById('cartList');
             let total = 0;
-            document.getElementById('cartList').innerHTML = cart.map((item, i) => {
+            list.innerHTML = cart.map((item, i) => {
                 total += (item.sell * item.buyQty);
-                return `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dashed #eee;">
+                return `<div style="display:flex; justify-content:space-between; font-size:0.85em; padding:5px 0; border-bottom: 1px dashed #eee;">
                     <span>${item.name} x${item.buyQty}</span>
-                    <span>${formatPHP(item.sell * item.buyQty)} <button onclick="cart.splice(${i},1);renderCart()" style="color:red; border:none; background:none;">✕</button></span>
+                    <span>${formatPHP(item.sell * item.buyQty)} <button onclick="cart.splice(${i},1);renderCart()" style="color:red; border:none; background:none; cursor:pointer;">✕</button></span>
                 </div>`;
             }).join('');
             document.getElementById('grandTotal').innerText = formatPHP(total);
             calcPayment();
         }
 
-        function setCash(amt) { document.getElementById('amtPaid').value = amt.toFixed(2); calcPayment(); }
+        function setCash(amt) {
+            document.getElementById('amtPaid').value = amt.toFixed(2);
+            calcPayment();
+        }
 
         function calcPayment() {
             const total = cart.reduce((sum, i) => sum + (i.sell * i.buyQty), 0);
             const paid = parseFloat(document.getElementById('amtPaid').value) || 0;
             const status = document.getElementById('payStatus');
-            if(total === 0) { status.innerText = "Empty"; return; }
-            if(paid < total) { status.innerText = "SHORT: " + formatPHP(total-paid); status.style.color="red"; }
-            else { status.innerText = "CHANGE: " + formatPHP(paid-total); status.style.color="green"; }
+            if(total === 0) { status.innerText = "Cart Empty"; status.style.background="#eee"; status.style.color="#333"; return; }
+            if(paid < total) {
+                status.innerText = "SHORT: " + formatPHP(total - paid);
+                status.style.background = "#f8d7da"; status.style.color = "red";
+            } else {
+                status.innerText = "CHANGE: " + formatPHP(paid - total);
+                status.style.background = "#d4edda"; status.style.color = "green";
+            }
         }
 
         function completeSale() {
+            if(!config) { logout(); return; } // Safety check
             const total = cart.reduce((sum, i) => sum + (i.sell * i.buyQty), 0);
             const paid = parseFloat(document.getElementById('amtPaid').value) || 0;
-            if(cart.length === 0 || paid < total) return alert("Check payment/cart");
+            if(cart.length === 0) return;
+            if(paid < total) return alert("Payment is short!");
 
             cart.forEach(c => {
                 const item = inventory[c.idx];
@@ -271,19 +364,23 @@
                 salesHistory.push({ revenue: c.sell * c.buyQty, profit: (c.sell - unitCost) * c.buyQty, date: new Date().toISOString() });
                 item.qty -= c.buyQty;
             });
-            isDirty = true; cart = []; document.getElementById('amtPaid').value = '';
-            render(); renderPOS(); renderCart(); alert("Done!");
+            
+            isDirty = true;
+            cart = []; document.getElementById('amtPaid').value = '';
+            render(); renderPOS(); renderCart(); alert("Sale Completed!");
         }
 
         function updateDashboard() {
-            const s = salesHistory.reduce((sum, s) => sum + s.revenue, 0);
-            const p = salesHistory.reduce((sum, s) => sum + s.profit, 0);
-            document.getElementById('weeklySales').innerText = formatPHP(s);
-            document.getElementById('weeklyProfit').innerText = formatPHP(p);
+            const sales = salesHistory.reduce((sum, s) => sum + s.revenue, 0);
+            const profit = salesHistory.reduce((sum, s) => sum + s.profit, 0);
+            document.getElementById('weeklySales').innerText = formatPHP(sales);
+            document.getElementById('weeklyProfit').innerText = formatPHP(profit);
         }
 
         async function fetchData() {
             if(!config) return;
+            const syncIcon = document.querySelector('.fab[title="Refresh"]');
+            syncIcon.classList.add('syncing');
             try {
                 const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
                     headers: { 'Authorization': `Bearer ${config.token}` }
@@ -293,16 +390,17 @@
                     const content = JSON.parse(decodeURIComponent(escape(atob(file.content))));
                     inventory = content.inventory || [];
                     salesHistory = content.salesHistory || [];
-                    document.getElementById('syncStatus').innerText = "Synced: " + new Date().toLocaleTimeString();
+                    document.getElementById('syncStatus').innerText = "Cloud Synced: " + new Date().toLocaleTimeString();
                     render(); renderPOS();
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Fetch failed", e); }
+            syncIcon.classList.remove('syncing');
         }
 
         async function syncToCloud() {
-            if(!config) return;
+            if(!config) { logout(); return; }
             const btn = document.getElementById('cloudBtn');
-            btn.style.opacity = "0.5";
+            btn.classList.add('syncing');
             try {
                 const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
                     headers: { 'Authorization': `Bearer ${config.token}` }
@@ -312,58 +410,89 @@
                 const update = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${config.token}` },
-                    body: JSON.stringify({ message: "Cloud Update " + new Date().toLocaleString(), content, sha: file.sha })
+                    body: JSON.stringify({ message: "Cloud Update", content, sha: file.sha })
                 });
-                if(update.ok) { isDirty = false; document.getElementById('syncStatus').innerText = "Saved!"; }
-            } catch (e) { alert("Sync Error"); }
-            btn.style.opacity = "1";
+                if(update.ok) {
+                    isDirty = false;
+                    document.getElementById('syncStatus').innerText = "Saved: " + new Date().toLocaleTimeString();
+                }
+            } catch (e) { alert("Sync failed. Check connection."); }
+            btn.classList.remove('syncing');
         }
+
+        // 12. Smart Sync every 5 mins
+        setInterval(() => { if (config && isDirty) syncToCloud(); }, 300000);
 
         function saveConfig() {
             const token = document.getElementById('ghToken').value;
             const repo = document.getElementById('ghRepo').value;
-            if(token && repo) { localStorage.setItem('inv_config', JSON.stringify({token, repo})); location.reload(); }
+            if(token && repo) { 
+                localStorage.setItem('inv_config', JSON.stringify({token, repo})); 
+                location.reload(); 
+            } else {
+                alert("Both fields are required.");
+            }
+        }
+
+        function logout() {
+            if(confirm("Logout and clear configuration?")) {
+                localStorage.removeItem('inv_config');
+                location.reload();
+            }
         }
 
         function addItem() {
+            if(!config) { logout(); return; }
             const n = document.getElementById('name').value;
             const c = parseFloat(document.getElementById('cost').value) || 0;
             const q = parseFloat(document.getElementById('qty').value) || 0;
             const s = parseFloat(document.getElementById('sell').value) || 0;
-            if(!n) return alert("Name required");
+            if(!n) return alert("Product name is required");
             const obj = { name: n, cost: c, qty: q, qtyInitial: q, sell: s };
             if(editingIndex > -1) inventory[editingIndex] = obj; else inventory.push(obj);
-            isDirty = true; clearForm(); render();
+            isDirty = true;
+            clearForm(); render();
         }
 
         function editItem(idx) {
-            editingIndex = idx; const item = inventory[idx];
+            editingIndex = idx;
+            const item = inventory[idx];
             document.getElementById('formTitle').innerText = "Editing: " + item.name;
             document.getElementById('name').value = item.name;
-            document.getElementById('cost').value = item.cost.toFixed(2);
+            document.getElementById('cost').value = item.cost;
             document.getElementById('qty').value = item.qty;
-            document.getElementById('sell').value = item.sell.toFixed(2);
+            document.getElementById('sell').value = item.sell;
+            calcRec();
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
         function copyItem(idx) {
             const item = inventory[idx];
+            document.getElementById('formTitle').innerText = "Copying Product";
             document.getElementById('name').value = item.name + " (Copy)";
-            document.getElementById('cost').value = item.cost.toFixed(2);
+            document.getElementById('cost').value = item.cost;
             document.getElementById('qty').value = item.qty;
-            document.getElementById('sell').value = item.sell.toFixed(2);
-            editingIndex = -1; window.scrollTo({top: 0, behavior: 'smooth'});
+            document.getElementById('sell').value = item.sell;
+            calcRec();
+            editingIndex = -1;
+            window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        function deleteItem(idx) { if(confirm("Delete?")) { inventory.splice(idx,1); isDirty = true; render(); } }
+        function deleteItem(idx) { 
+            if(confirm("Delete this product forever?")) { inventory.splice(idx,1); isDirty = true; render(); } 
+        }
 
-        function restockItem(idx) {
-            const amt = prompt("How many to add?");
-            if(amt && !isNaN(amt)) {
-                inventory[idx].qty += parseInt(amt);
+        function restockItem(idx) { 
+            const amt = prompt("How many units to add?"); 
+            if(amt && !isNaN(amt)) { 
+                inventory[idx].qty += parseInt(amt); 
                 inventory[idx].qtyInitial = (inventory[idx].qtyInitial || 0) + parseInt(amt);
-                isDirty = true; render();
-            }
+                isDirty = true; render(); 
+            } 
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log("SW failed", err));
         }
     </script>
 </body>
