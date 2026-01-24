@@ -499,7 +499,7 @@
 
         function logout() {
             if(confirm("Logout and clear configuration?")) {
-                localStorage.removeItem('inv_config');
+                sessionStorage.removeItem('inv_config');
                 location.reload();
             }
         }
