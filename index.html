@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --primary: #007bff;
+            --success: #28a745;
+            --dark: #212529;
+            --bg: #f4f7f6;
+        }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: #333; margin: 0; padding-bottom: 100px; }
+        
+        /* Dashboard Styling */
+        .sticky-container {
+            position: sticky; top: 0; z-index: 1000;
+            background: var(--dark); color: white;
+            padding: 15px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex; justify-content: space-around;
+        }
+        .stat-box { text-align: center; }
+        .stat-box small { opacity: 0.7; font-size: 0.7em; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-box strong { display: block; font-size: 1.2em; }
+
+        /* Form Styling */
+        .input-section { background: white; margin: 20px; padding: 20px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .full-width { grid-column: span 2; }
+        
+        input { 
+            padding: 12px; border-radius: 8px; border: 1px solid #ddd; 
+            font-size: 16px; width: 100%; box-sizing: border-box; 
+        }
+        
+        .rec-box { 
+            grid-column: span 2; background: #eef6ff; padding: 12px; 
+            border-radius: 8px; border-left: 4px solid var(--primary);
+            font-size: 0.85em; display: flex; justify-content: space-between;
+        }
+
+        /* The Grid */
+        #list { 
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+            gap: 15px; padding: 20px; 
+        }
+
+        .card { 
+            background: white; border-radius: 15px; overflow: hidden;
+            display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #eee; transition: transform 0.2s;
+        }
+        .card:active { transform: scale(0.98); }
+        
+        .card-header { padding: 12px; font-weight: bold; background: #fafafa; border-bottom: 1px solid #eee; position: relative; }
+        .del-btn { 
+            position: absolute; top: 5px; right: 5px; background: #ff4d4d; 
+            color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px;
+        }
+
+        .card-body { padding: 12px; flex-grow: 1; }
+        .unit-cost { font-size: 0.75em; color: #777; margin-bottom: 5px; }
+        .profit-badge { 
+            display: inline-block; background: #e8f5e9; color: var(--success); 
+            padding: 4px 8px; border-radius: 5px; font-weight: bold; font-size: 0.8em; margin-top: 5px;
+        }
+
+        .card-footer { padding: 10px; background: #fff; border-top: 1px dashed #ddd; }
+        .sell-input { border: 1px solid var(--primary); font-weight: bold; color: var(--primary); text-align: center; }
+
+        .qty-controls { 
+            display: flex; align-items: center; justify-content: space-between; 
+            background: #f8f9fa; border-radius: 10px; margin-top: 8px;
+        }
+        .qty-btn { background: none; color: var(--dark); width: 35px; padding: 5px; border: none; font-size: 1.2em; }
+        
+        /* Floating Action Buttons */
+        .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .fab { width: 55px; height: 55px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+        .search-container { padding: 0 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="app" style="display:none">
+        <div class="sticky-container">
+            <div class="stat-box">
+                <small>Invested</small>
+                <strong id="totalCost">0.00</strong>
+            </div>
+            <div class="stat-box">
+                <small>Potential</small>
+                <strong id="totalSell">0.00</strong>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="grid-inputs">
+                <input type="text" id="name" placeholder="Item Name" class="full-width">
+                <input type="number" id="cost" placeholder="Total Cost" oninput="calcRec()">
+                <input type="number" id="qty" placeholder="Qty" oninput="calcRec()">
+                <div class="rec-box">
+                    <span>Unit: <b id="unitCostDisp">0.00</b></span>
+                    <span>Rec: <b id="recPrice">0.00</b></span>
+                </div>
+                <input type="number" id="markup" placeholder="Markup %" value="12" oninput="calcRec()">
+                <input type="number" id="sell" placeholder="Sell Price" style="border: 2px solid var(--success)">
+            </div>
+            <button onclick="addItem()" style="margin-top:15px; background: var(--primary);">+ Add to Inventory</button>
+        </div>
+
+        <div class="search-container">
+            <input type="text" id="searchBar" placeholder="🔍 Search products..." oninput="render()">
+        </div>
+
+        <div id="list"></div>
+
+        <div class="fab-container">
+            <button class="fab refresh-btn" onclick="fetchData()" title="Refresh">🔄</button>
+            <button class="fab sync-btn" onclick="syncToCloud()" title="Sync">☁️</button>
+        </div>
+    </div>
+
+    <div id="setup" style="display:block; padding: 40px 20px; text-align: center;">
+        <h2>Store Setup</h2>
+        <input type="password" id="ghToken" placeholder="GitHub Token">
+        <input type="text" id="ghRepo" placeholder="username/repo-name">
+        <button onclick="saveConfig()">Launch Manager</button>
+        <p onclick="logout()" style="color:red; font-size: 0.8em; margin-top:20px;">Reset Credentials</p>
+    </div>
+
+    <script>
+        let inventory = [];
+        let config = JSON.parse(localStorage.getItem('inv_config'));
+
+        if (config) {
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            fetchData();
+        }
+
+        function calcRec() {
+            const total = parseFloat(document.getElementById('cost').value) || 0;
+            const pieces = parseFloat(document.getElementById('qty').value) || 1;
+            const mark = parseFloat(document.getElementById('markup').value) || 0;
+            const unit = total / pieces;
+            const rec = unit * (1 + (mark / 100));
+            document.getElementById('unitCostDisp').innerText = unit.toFixed(2);
+            document.getElementById('recPrice').innerText = rec.toFixed(2);
+            document.getElementById('sell').value = rec.toFixed(2);
+        }
+
+        function render() {
+            const listDiv = document.getElementById('list');
+            const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+            let sumCost = 0; let sumSell = 0;
+
+            const filtered = inventory.filter(item => {
+                const match = item.name.toLowerCase().includes(searchTerm);
+                if (match) {
+                    sumCost += parseFloat(item.cost) || 0;
+                    sumSell += (parseFloat(item.sell) || 0) * (parseFloat(item.qty) || 0);
+                }
+                return match;
+            });
+
+            document.getElementById('totalCost').innerText = sumCost.toLocaleString();
+            document.getElementById('totalSell').innerText = sumSell.toLocaleString();
+
+            if (inventory.length === 0) {
+                listDiv.innerHTML = "<div style='grid-column: 1/-1; text-align:center; opacity:0.5; padding:50px;'>Empty Shelf</div>";
+                return;
+            }
+
+            listDiv.innerHTML = filtered.map((item, i) => {
+                const actualIndex = inventory.indexOf(item);
+                const uCost = (parseFloat(item.cost) / (parseFloat(item.qty) || 1)) || 0;
+                const profit = parseFloat(item.sell) - uCost;
+
+                return `
+                <div class="card">
+                    <div class="card-header">
+                        ${item.name}
+                        <button class="del-btn" onclick="deleteItem(${actualIndex})">×</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="unit-cost">Unit Cost: ${uCost.toFixed(2)}</div>
+                        <div style="font-size: 0.8em; color: #555;">Stock: <b>${item.qty}</b></div>
+                        <div class="profit-badge">+$${profit.toFixed(2)}</div>
+                    </div>
+                    <div class="card-footer">
+                        <input type="number" class="sell-input" value="${item.sell}" onchange="updateField(${actualIndex}, 'sell', this.value)">
+                        <div class="qty-controls">
+                            <button class="qty-btn" onclick="updateField(${actualIndex}, 'qty', ${parseFloat(item.qty) - 1})">−</button>
+                            <span>${item.qty}</span>
+                            <button class="qty-btn" onclick="updateField(${actualIndex}, 'qty', ${parseFloat(item.qty) + 1})">+</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Logic Functions (fetchData, syncToCloud, addItem, etc. should be fully included here)
+        // [Copy these from the previous working script version]
+        
+        async function fetchData() {
+            const listDiv = document.getElementById('list');
+            try {
+                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${config.token}`, 'Accept': 'application/vnd.github.v3+json' }
+                });
+                if (!res.ok) throw new Error("Connection Error");
+                const file = await res.json();
+                inventory = JSON.parse(decodeURIComponent(escape(atob(file.content))) || "[]");
+                render();
+            } catch (err) { listDiv.innerHTML = "Error loading data."; }
+        }
+
+        async function syncToCloud() {
+            const btn = document.querySelector('.sync-btn');
+            btn.innerText = "⏳";
+            try {
+                const getRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${config.token}` }
+                });
+                const file = await getRes.json();
+                const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(inventory))));
+                await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: "Update", content: b64, sha: file.sha })
+                });
+                alert("Cloud Updated");
+                fetchData();
+            } catch (err) { alert("Sync Error"); }
+            finally { btn.innerText = "☁️"; }
+        }
+
+        function addItem() {
+            const n = document.getElementById('name').value;
+            const q = document.getElementById('qty').value;
+            const c = document.getElementById('cost').value;
+            const s = document.getElementById('sell').value;
+            if (!n || !q || !c) return;
+            inventory.push({ name: n, qty: q, cost: c, sell: s, markup: document.getElementById('markup').value });
+            render();
+            ['name','qty','cost','sell'].forEach(id => document.getElementById(id).value = '');
+        }
+
+        function updateField(i, f, v) { if(v < 0 && f === 'qty') v = 0; inventory[i][f] = v; render(); }
+        function deleteItem(i) { if(confirm("Delete?")) { inventory.splice(i,1); render(); } }
+        function saveConfig() { 
+            const t = document.getElementById('ghToken').value; 
+            const r = document.getElementById('ghRepo').value; 
+            if(t && r) { localStorage.setItem('inv_config', JSON.stringify({token:t, repo:r})); location.reload(); }
+        }
+        function logout() { localStorage.clear(); location.reload(); }
+    </script>
+</body>
+</html>
