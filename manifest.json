@@ -1,13 +1,13 @@
 {
-  "name": "Inventory Tracker",
-  "short_name": "Stock",
+  "name": "Manager Pro",
+  "short_name": "Tracker",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f0f2f5",
   "theme_color": "#28a745",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3081/3081913.png",
+      "src": "inventory-management.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
