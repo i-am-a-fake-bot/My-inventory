@@ -7,7 +7,7 @@
   "theme_color": "#28a745",
   "icons": [
     {
-      "src": "inventory-management.png",
+      "src": "online-shopping.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
