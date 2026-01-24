@@ -65,6 +65,11 @@
 
         .field-group { margin-bottom: 5px; }
         .field-group label { display: block; font-size: 0.65em; font-weight: bold; color: #666; text-transform: uppercase; margin-left: 5px; }
+        
+        /* 1c. Input Wrappers for ₱ */
+        .input-wrapper { position: relative; }
+        .input-wrapper::before { content: '₱'; position: absolute; left: 10px; top: 12px; font-size: 0.9em; color: #666; }
+        .input-wrapper input { padding-left: 25px; }
 
         .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 3000; }
         .fab { width: 50px; height: 50px; border-radius: 50%; border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
@@ -73,7 +78,7 @@
         .syncing { animation: spin 1s linear infinite; }
 
         #setup { position: fixed; inset: 0; background: var(--bg); z-index: 5000; padding: 40px; text-align: center; display: none; }
-        input { width: 100%; padding: 12px; margin: 2px 0 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        input { width: 100%; padding: 12px; margin: 2px 0 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         
         .rec-note { font-size: 0.7em; background: #e9ecef; padding: 5px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 10px;}
         .use-btn { background: var(--primary); color: white; border: none; border-radius: 4px; padding: 2px 6px; font-size: 0.8em; cursor: pointer; font-weight: bold; }
@@ -93,7 +98,7 @@
         <div class="sticky-container">
             <div class="stats-grid">
                 <div class="stat-box"><small>Capital</small><strong id="totalCost">₱0.00</strong></div>
-                <div class="stat-box"><small>Inventory Value</small><strong id="totalSell">₱0.00</strong></div>
+                <div class="stat-box"><small>Inv. Value</small><strong id="totalSell">₱0.00</strong></div>
                 <div class="stat-box"><small>Sales</small><strong id="weeklySales" style="color:#28a745">₱0.00</strong></div>
                 <div class="stat-box"><small>Profit</small><strong id="weeklyProfit" style="color:#17a2b8">₱0.00</strong></div>
             </div>
@@ -128,7 +133,9 @@
                         <button class="cash-btn" onclick="setCash(500)">₱500.00</button>
                         <button class="cash-btn" onclick="setCash(1000)">₱1k</button>
                     </div>
-                    <input type="number" step="0.01" id="amtPaid" placeholder="Amount Paid" oninput="calcPayment()">
+                    <div class="input-wrapper">
+                        <input type="number" step="0.01" id="amtPaid" placeholder="Amount Paid" oninput="calcPayment()">
+                    </div>
                     <div id="payStatus" class="pay-status" style="background:#eee">Enter Amount</div>
                     <button onclick="completeSale()" style="width:100%; padding:15px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Confirm</button>
                 </div>
@@ -141,11 +148,11 @@
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0 8px;">
                     <div class="field-group" style="grid-column: span 2;">
                         <label>Product Name</label>
-                        <input type="text" id="name" placeholder="e.g. Coca Cola 1.5L">
+                        <input type="text" id="name" placeholder="e.g. Milo 22g">
                     </div>
                     <div class="field-group">
                         <label>Cost</label>
-                        <input type="number" step="0.01" id="cost" placeholder="0.00" oninput="calcRec()">
+                        <div class="input-wrapper"><input type="number" step="0.01" id="cost" placeholder="0.00" oninput="calcRec()"></div>
                     </div>
                     <div class="field-group">
                         <label>Qty</label>
@@ -157,7 +164,7 @@
                     </div>
                     <div class="field-group">
                         <label>Selling Price</label>
-                        <input type="number" step="0.01" id="sell" placeholder="0.00">
+                        <div class="input-wrapper"><input type="number" step="0.01" id="sell" placeholder="0.00"></div>
                     </div>
                 </div>
                 <div class="rec-note">
@@ -166,7 +173,7 @@
                 </div>
                 
                 <div style="display:flex; gap:8px; margin-top:5px;">
-                    <button onclick="addItem()" id="mainBtn" style="flex:2; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">SAVE PRODUCT</button>
+                    <button onclick="addItem()" id="mainBtn" style="flex:1; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">SAVE PRODUCT</button>
                     <button onclick="clearForm()" style="flex:1; padding:12px; background:#6c757d; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">CANCEL</button>
                 </div>
             </div>
@@ -191,15 +198,14 @@
 
         if (!config) { document.getElementById('setup').style.display = 'block'; } else { fetchData(); }
 
-        // Point 11: Safety exit warning
         window.addEventListener('beforeunload', (e) => {
             if (isDirty) {
                 e.preventDefault();
-                e.returnValue = 'You have unsaved changes! Wait for auto-sync or click the cloud.';
+                e.returnValue = 'You have unsaved changes!';
             }
         });
 
-        function formatPHP(num) { return '₱' + parseFloat(num).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+        function formatPHP(num) { return '₱' + parseFloat(num).toFixed(2); }
 
         function switchTab(tab) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -209,7 +215,6 @@
             render(); renderPOS();
         }
 
-        // Point 1c: Improved Recommendation
         let currentRec = 0;
         function calcRec() {
             const cost = parseFloat(document.getElementById('cost').value) || 0;
@@ -254,7 +259,7 @@
                     <div class="card-header">${item.name}</div>
                     <div class="card-body">
                         <span class="price-tag">${formatPHP(item.sell)}</span>
-                        <div style="font-size:0.7em; color:#666; margin-bottom:4px;">Profit: <span style="color:var(--success)">+${(item.sell - unitCost).toFixed(2)}</span></div>
+                        <div style="font-size:0.75em; color:#666; margin-bottom:4px;">Profit: <span style="color:var(--success)">+${(item.sell - unitCost).toFixed(2)}</span></div>
                         <div style="font-weight:bold; font-size: 0.9em;">Stock: ${item.qty}</div>
                     </div>
                     <div class="card-actions">
@@ -285,13 +290,20 @@
             }).join('');
         }
 
+        // 2c. Multi-buy Popup
         function addToCart(idx) {
             const item = inventory[idx];
+            let count = prompt(`How many "${item.name}" are being bought?`, "1");
+            if (count === null) return;
+            count = parseInt(count);
+            if (isNaN(count) || count <= 0) return alert("Invalid quantity");
+            if (count > item.qty) return alert(`Only ${item.qty} left in stock!`);
+
             const inCart = cart.find(c => c.idx === idx);
             if (inCart) {
-                if (inCart.buyQty < item.qty) inCart.buyQty++;
-                else alert("Out of Stock");
-            } else { cart.push({...item, buyQty: 1, idx: idx}); }
+                if (inCart.buyQty + count <= item.qty) inCart.buyQty += count;
+                else alert("Not enough stock for that total.");
+            } else { cart.push({...item, buyQty: count, idx: idx}); }
             renderCart();
         }
 
@@ -310,7 +322,7 @@
         }
 
         function setCash(amt) {
-            document.getElementById('amtPaid').value = amt;
+            document.getElementById('amtPaid').value = amt.toFixed(2);
             calcPayment();
         }
 
@@ -397,9 +409,8 @@
             btn.classList.remove('syncing');
         }
 
-        setInterval(() => {
-            if (config && isDirty) syncToCloud();
-        }, 300000);
+        // Smart Sync every 5 mins
+        setInterval(() => { if (config && isDirty) syncToCloud(); }, 300000);
 
         function saveConfig() {
             const token = document.getElementById('ghToken').value;
