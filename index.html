@@ -81,13 +81,49 @@
             const totalCost = parseFloat(document.getElementById('cost').value) || 0;
             const pieces = parseFloat(document.getElementById('qty').value) || 1;
             const markup = parseFloat(document.getElementById('markup').value) || 0;
-
             const unitCost = totalCost / pieces;
             const rec = unitCost * (1 + (markup / 100));
-
             document.getElementById('unitCostDisp').innerText = unitCost.toFixed(2);
             document.getElementById('recPrice').innerText = rec.toFixed(2);
             document.getElementById('sell').value = rec.toFixed(2);
+        }
+
+        async function fetchData() {
+            const listDiv = document.getElementById('list');
+            listDiv.innerHTML = "Fetching latest data...";
+            try {
+                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${config.token}`, 'Accept': 'application/vnd.github.v3+json' },
+                    cache: 'no-store'
+                });
+                if (!res.ok) throw new Error(`Status ${res.status}`);
+                const file = await res.json();
+                const decodedText = decodeURIComponent(escape(atob(file.content)));
+                inventory = JSON.parse(decodedText || "[]");
+                render();
+            } catch (err) {
+                listDiv.innerHTML = `<div class="error-box">Connection Failed: ${err.message}</div>`;
+            }
+        }
+
+        async function syncToCloud() {
+            const btn = document.querySelector('.sync-btn');
+            btn.innerText = "Saving..."; btn.disabled = true;
+            try {
+                const getRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${config.token}`, 'Accept': 'application/vnd.github.v3+json' },
+                    cache: 'no-store'
+                });
+                const file = await getRes.json();
+                const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(inventory))));
+                const putRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${config.token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: "Update", content: b64, sha: file.sha })
+                });
+                if (putRes.ok) { alert("Synced Successfully!"); fetchData(); }
+            } catch (err) { alert("Sync Error: " + err.message); }
+            finally { btn.innerText = "☁️ Sync to All Devices"; btn.disabled = false; }
         }
 
         function render() {
@@ -114,7 +150,7 @@
 
             listDiv.innerHTML = filtered.map((item, i) => {
                 const actualIndex = inventory.indexOf(item);
-                const uCost = (parseFloat(item.cost) / parseFloat(item.qty)) || 0;
+                const uCost = (parseFloat(item.cost) / (parseFloat(item.qty) || 1)) || 0;
                 const currentProfit = parseFloat(item.sell) - uCost;
                 
                 return `
@@ -163,15 +199,25 @@
         }
 
         function deleteItem(i) { if (confirm("Delete?")) { inventory.splice(i, 1); render(); } }
+        
         function saveConfig() { 
             const t = document.getElementById('ghToken').value.trim(); 
             const r = document.getElementById('ghRepo').value.trim();
             if(t && r) { localStorage.setItem('inv_config', JSON.stringify({token:t, repo:r})); location.reload(); }
         }
+
         function logout() { if(confirm("Logout?")) { localStorage.clear(); location.reload(); } }
-        async function nuclearReset() { /* Keep existing nuclearReset logic */ }
-        async function fetchData() { /* Keep existing fetchData logic */ }
-        async function syncToCloud() { /* Keep existing syncToCloud logic */ }
+
+        async function nuclearReset() {
+            if(confirm("This will wipe all app data and reload. Continue?")) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for(let reg of regs) { await reg.unregister(); }
+                const cacheNames = await caches.keys();
+                for(let name of cacheNames) { await caches.delete(name); }
+                localStorage.clear();
+                location.reload(true);
+            }
+        }
     </script>
 </body>
 </html>
