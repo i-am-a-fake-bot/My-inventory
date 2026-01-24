@@ -197,7 +197,7 @@
         let cart = [];
         let editingIndex = -1;
         let isDirty = false;
-        let config = JSON.parse(sessionStorage.getItem('inv_config'));
+        let config = JSON.parse(localStorage.getItem('inv_config'));
 
         // Handle initial login check
         if (!config) { 
@@ -405,75 +405,32 @@
                 const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
                     headers: { 'Authorization': `Bearer ${config.token}` }
                 });
-        
                 if(res.ok) {
                     const file = await res.json();
                     const content = JSON.parse(decodeURIComponent(escape(atob(file.content))));
                     inventory = content.inventory || [];
                     salesHistory = content.salesHistory || [];
                     document.getElementById('syncStatus').innerText = "Cloud Synced: " + new Date().toLocaleTimeString();
-                } else if(res.status === 404) {
-                    // File doesn’t exist, start with empty data
-                    inventory = [];
-                    salesHistory = [];
-                    document.getElementById('syncStatus').innerText = "Cloud ready: data.json missing, will create on sync.";
-                } else if(res.status === 401) {
-                    // Unauthorized
-                    alert("Unauthorized! Your token is invalid. Logging out...");
-                    logout(); // make sure you have a logout() function
-                    return;
-                } else if(res.status === 403) {
-                    // Forbidden or Rate Limit
-                    const reset = res.headers.get('X-RateLimit-Reset');
-                    if(reset) {
-                        const resetTime = new Date(reset * 1000);
-                        alert(`Rate limit exceeded. Try again after ${resetTime.toLocaleTimeString()}`);
-                    } else {
-                        alert("Forbidden! Your token cannot access this repo.");                    
-                    return;
-                } else {
-                    throw new Error("Fetch failed with " + res.status);
+                    render(); renderPOS();
                 }
-        
-                render(); 
-                renderPOS();
-        
-            } catch (e) {
-                console.error("Fetch failed", e);
-                alert("Could not fetch cloud data. Check your repo and token.");
-            } finally {
-                syncIcon.classList.remove('syncing');
-            }
+            } catch (e) { console.error("Fetch failed", e); }
+            syncIcon.classList.remove('syncing');
         }
-
 
         async function syncToCloud() {
             if(!config) { logout(); return; }
             const btn = document.getElementById('cloudBtn');
             btn.classList.add('syncing');
             try {
+                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+                    headers: { 'Authorization': `Bearer ${config.token}` }
+                });
+                const file = await res.json();
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify({ inventory, salesHistory }))));
-                
-                let sha;
-                try {
-                    const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
-                        headers: { 'Authorization': `Bearer ${config.token}` }
-                    });
-                    if(res.ok) {
-                        const file = await res.json();
-                        sha = file.sha; // use sha if file exists
-                    } else if(res.status !== 404) {
-                        throw new Error("GitHub fetch error: " + res.status);
-                    }
-                } catch(e) {
-                    console.error(e);
-                }
-                
-                // Now PUT, include sha only if it exists
                 const update = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${config.token}` },
-                    body: JSON.stringify({ message: "Cloud Update", content, ...(sha ? { sha } : {}) })
+                    body: JSON.stringify({ message: "Cloud Update", content, sha: file.sha })
                 });
                 if(update.ok) {
                     isDirty = false;
@@ -490,7 +447,7 @@
             const token = document.getElementById('ghToken').value;
             const repo = document.getElementById('ghRepo').value;
             if(token && repo) { 
-                sessionStorage.setItem('inv_config', JSON.stringify({token, repo}));
+                localStorage.setItem('inv_config', JSON.stringify({token, repo})); 
                 location.reload(); 
             } else {
                 alert("Both fields are required.");
