@@ -2,523 +2,498 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Manager Pro v3.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Pro</title>
     <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#212529">
+
     <style>
         :root {
-            --primary: #0d6efd; --success: #198754; --info: #0dcaf0;
-            --warning: #ffc107; --danger: #dc3545; --dark: #212529; --bg: #f8f9fa;
+            --primary: #007bff; --success: #28a745; --info: #17a2b8;
+            --warning: #ffc107; --danger: #dc3545; --dark: #212529; --bg: #f4f7f6;
         }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; color: #333; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; }
         
-        /* 7. Layout overlapping fix & Header */
-        .header-main { position: sticky; top: 0; z-index: 2000; background: var(--dark); color: white; padding: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
-        .stat-card { background: rgba(255,255,255,0.1); padding: 8px 4px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
-        .stat-card small { font-size: 0.65em; display: block; color: #aaa; text-transform: uppercase; margin-bottom: 2px; }
-        .stat-card strong { font-size: 0.9em; color: var(--warning); display: block; }
+        .sticky-container {
+            position: sticky; top: 0; z-index: 2000;
+            background: var(--dark); color: white;
+            padding: 10px 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 5px; }
+        .stat-box { text-align: center; background: rgba(255,255,255,0.1); padding: 8px 2px; border-radius: 5px; }
+        .stat-box small { font-size: 0.55em; text-transform: uppercase; display: block; opacity: 0.8; letter-spacing: 0.5px; }
+        .stat-box strong { font-size: 0.85em; color: var(--warning); }
 
-        .nav-tabs { display: flex; gap: 8px; }
-        .tab-trigger { flex: 1; padding: 12px; border: none; background: #3c4146; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .tab-trigger.active { background: var(--primary); transform: translateY(-2px); }
+        .tabs { display: flex; gap: 5px; padding: 10px 10px 0; }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.1); color: white; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .tab-btn.active { background: var(--primary); }
 
-        .view-section { display: none; padding: 15px; padding-bottom: 150px; }
-        .view-section.active { display: block; }
+        .view { display: none; padding: 15px; }
+        .view.active { display: block; }
 
-        /* 1a, 1b, 1d. Inventory Product Cards */
-        #inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 15px; }
-        .p-card { background: white; border-radius: 12px; border: 1px solid #ddd; position: relative; overflow: hidden; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .p-card.low-stock { background: #ffff00 !important; border: 2px solid #d4af37; } /* 1d. Yellow */
-        .p-card.no-stock { background: #ff4d4d !important; border: 2px solid #8b0000; }  /* 1d. Red */
-        .sold-out-tag { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); 
-                          color: white; border: 4px solid white; padding: 8px; font-weight: 900; background: rgba(0,0,0,0.7); z-index: 10; font-size: 1em; }
-
-        .p-card-content { padding: 12px; text-align: center; }
-        .p-card-price { color: var(--success); font-weight: 800; font-size: 1.2em; margin-bottom: 5px; }
-        .p-card-meta { font-size: 0.7em; color: #555; line-height: 1.4; }
+        #list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+        .card { background: white; border-radius: 12px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; position: relative; transition: 0.2s; }
         
-        .p-card-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px; background: rgba(0,0,0,0.03); border-top: 1px solid #eee; }
-        .btn-action { font-size: 0.7em; padding: 8px 0; border: none; color: white; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        /* 1d. Stock Alert Colors */
+        .card.low-stock { background: #fff3cd !important; border-color: #ffeeba; }
+        .card.out-of-stock { background: #f8d7da !important; border-color: #f5c6cb; }
+        
+        .sold-out-badge { 
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-20deg);
+            background: none; color: #dc3545; padding: 5px 10px; font-weight: 900; font-size: 1.2rem;
+            border: 4px double #dc3545; z-index: 10; display: none; text-transform: uppercase;
+            letter-spacing: 2px; opacity: 0.8; pointer-events: none;
+        }
+        .card.out-of-stock .sold-out-badge { display: block; }
 
-        /* 1c, 1e, 1f. Product Form */
-        .form-panel { background: white; padding: 20px; border-radius: 15px; border: 1px solid #ccc; margin-bottom: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .label-text { font-size: 0.75em; font-weight: 800; color: #444; display: block; margin-bottom: 5px; }
-        .input-group { position: relative; margin-bottom: 15px; }
-        .input-group span.currency-mark { position: absolute; left: 12px; top: 12px; font-weight: bold; color: #888; pointer-events: none; }
-        .input-group input { width: 100%; box-sizing: border-box; padding: 12px 12px 12px 30px; border: 1px solid #bbb; border-radius: 10px; font-size: 1em; }
-        .input-group.no-₱ input { padding-left: 12px; }
+        .card-header { padding: 10px; font-weight: bold; background: rgba(0,0,0,0.03); text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .card-body { padding: 12px; flex-grow: 1; text-align: center; }
+        .price-tag { font-size: 1.2em; font-weight: 800; color: var(--success); display: block; }
+        
+        .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px; background: rgba(0,0,0,0.05); }
+        .act-btn { padding: 8px 2px; border: none; border-radius: 4px; font-size: 0.7em; font-weight: bold; color: white; cursor: pointer; }
 
-        /* 2a. Sticky Search */
-        .search-container { position: sticky; top: 125px; background: var(--bg); padding: 10px 0; z-index: 1500; }
-        .search-bar { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #bbb; font-size: 1em; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .pos-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; }
+        @media (max-width: 768px) { .pos-grid { grid-template-columns: 1fr; } }
+        
+        .sticky-search { position: sticky; top: 115px; z-index: 1000; background: var(--bg); padding: 5px 0; }
 
-        /* 2b. POS Table */
-        .checkout-table { width: 100%; background: white; border-collapse: collapse; border-radius: 12px; overflow: hidden; font-size: 0.9em; }
-        .checkout-table th { background: #f1f3f5; padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; }
-        .checkout-table td { padding: 12px; border-bottom: 1px solid #eee; }
+        .cash-presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 10px 0; }
+        .cash-btn { padding: 10px 2px; border: 1px solid #ddd; border-radius: 5px; background: white; font-size: 0.75em; font-weight: bold; cursor: pointer; }
 
-        /* 14. Logout */
-        .logout-link { position: fixed; bottom: 15px; left: 15px; font-size: 0.75em; color: #999; text-decoration: underline; background: none; border: none; z-index: 2500; }
+        .pay-status { padding: 12px; border-radius: 8px; font-weight: bold; text-align: center; margin: 10px 0; border: 1px solid #ddd; }
 
-        /* 12. Smart Sync Indicator */
-        .sync-badge { position: fixed; bottom: 80px; right: 20px; font-size: 0.7em; background: #333; color: white; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 8px; z-index: 2500; }
-        .loader-spin { width: 12px; height: 12px; border: 2px solid #fff; border-top: 2px solid transparent; border-radius: 50%; animation: spin-anim 1s linear infinite; display: none; }
-        @keyframes spin-anim { 100% { transform: rotate(360deg); } }
+        .field-group { margin-bottom: 5px; }
+        .field-group label { display: block; font-size: 0.65em; font-weight: bold; color: #666; text-transform: uppercase; margin-left: 5px; }
+        
+        .input-wrapper { position: relative; }
+        .input-wrapper::before { content: '₱'; position: absolute; left: 10px; top: 12px; font-size: 0.9em; color: #666; }
+        .input-wrapper input { padding-left: 25px; }
 
-        /* Modal / Receipt */
-        .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; }
-        .receipt-box { background: white; padding: 25px; border-radius: 4px; width: 90%; max-width: 320px; font-family: 'Courier New', monospace; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 3000; }
+        .fab { width: 50px; height: 50px; border-radius: 50%; border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
+        
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .syncing { animation: spin 1s linear infinite; }
+
+        #setup { position: fixed; inset: 0; background: var(--bg); z-index: 5000; padding: 40px; text-align: center; display: none; }
+        input { width: 100%; padding: 12px; margin: 2px 0 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        
+        .rec-note { font-size: 0.7em; background: #e9ecef; padding: 5px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 10px;}
+        .use-btn { background: var(--primary); color: white; border: none; border-radius: 4px; padding: 2px 6px; font-size: 0.8em; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="setup-screen" style="display:none; position:fixed; inset:0; background:white; z-index:10000; padding:40px; text-align:center;">
-    <h2 style="margin-top:0;">Manager Pro Initial Setup</h2>
-    <p style="color:#666; font-size:0.9em;">Missing GitHub Config. Please enter credentials.</p>
-    <input type="password" id="cfg-token" placeholder="GitHub Token (ghp_...)" style="width:100%; padding:15px; margin-bottom:15px; border:1px solid #ccc; border-radius:8px;">
-    <input type="text" id="cfg-repo" placeholder="User/Repository" style="width:100%; padding:15px; margin-bottom:20px; border:1px solid #ccc; border-radius:8px;">
-    <button onclick="saveInitConfig()" style="width:100%; padding:15px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold;">INITIALIZE APP</button>
-</div>
-
-<div class="header-main">
-    <div class="stats-row">
-        <div class="stat-card"><small>Capital</small><strong id="dash-cap">₱0.00</strong></div>
-        <div class="stat-card"><small>Inv.Value</small><strong id="dash-val">₱0.00</strong></div>
-        <div class="stat-card"><small>Sales</small><strong id="dash-sales" style="color:#48f542">₱0.00</strong></div>
-        <div class="stat-card"><small>Profit</small><strong id="dash-profit" style="color:#42d7f5">₱0.00</strong></div>
+    <div id="setup">
+        <h2 style="margin-top:20%;">Manager Pro</h2>
+        <p style="font-size:0.8em; color: #666;">Enter GitHub details to sync data.</p>
+        <input type="password" id="ghToken" placeholder="GitHub Token">
+        <input type="text" id="ghRepo" placeholder="username/repository">
+        <button onclick="saveConfig()" style="width:100%; padding:15px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold;">CONNECT REPO</button>
     </div>
-    <div class="nav-tabs">
-        <button id="tab-checkout" class="tab-trigger active" onclick="showTab('checkout')">🛒 Checkout</button>
-        <button id="tab-inv" class="tab-trigger" onclick="showTab('inv')">📦 Inventory</button>
-    </div>
-</div>
 
-<div id="view-checkout" class="view-section active">
-    <div class="search-container">
-        <input type="text" id="pos-search" class="search-bar" placeholder="🔍 Search product name..." oninput="drawPOS()">
-    </div>
-    <table class="checkout-table" style="margin-bottom:25px;">
-        <thead><tr><th>Item Name</th><th>Price</th><th>Stock</th><th>Action</th></tr></thead>
-        <tbody id="pos-body"></tbody>
-    </table>
-
-    <div style="background:white; padding:15px; border-radius:15px; border:1px solid #ddd;">
-        <h4 style="margin:0 0 10px 0; color:var(--dark);">Current Cart</h4>
-        <div id="cart-items" style="min-height:20px; border-bottom:1px dashed #eee; margin-bottom:10px;"></div>
-        <div id="cart-total" style="text-align:right; font-size:1.8em; font-weight:900; color:var(--dark); margin-bottom:15px;">₱0.00</div>
-        
-        <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:5px; margin-bottom:15px;">
-            <button onclick="quickPay(20)" style="padding:10px 0; border:1px solid #ddd; background:#f8f9fa; font-weight:bold; border-radius:5px;">₱20</button>
-            <button onclick="quickPay(50)" style="padding:10px 0; border:1px solid #ddd; background:#f8f9fa; font-weight:bold; border-radius:5px;">₱50</button>
-            <button onclick="quickPay(100)" style="padding:10px 0; border:1px solid #ddd; background:#f8f9fa; font-weight:bold; border-radius:5px;">₱100</button>
-            <button onclick="quickPay(500)" style="padding:10px 0; border:1px solid #ddd; background:#f8f9fa; font-weight:bold; border-radius:5px;">₱500</button>
-            <button onclick="quickPay(1000)" style="padding:10px 0; border:1px solid #ddd; background:#f8f9fa; font-weight:bold; border-radius:5px;">₱1k</button>
-        </div>
-
-        <span class="label-text">Payment Amount</span>
-        <div class="input-group">
-            <span class="currency-mark">₱</span>
-            <input type="number" id="cash-input" oninput="calcChange()" step="0.01" min="0">
-        </div>
-        
-        <div id="change-status" style="padding:12px; border-radius:10px; text-align:center; font-weight:bold; background:#f8f9fa; margin-bottom:15px; font-size:0.9em;">Ready</div>
-        
-        <button id="confirm-sale-btn" disabled onclick="finalizeSale()" style="width:100%; padding:18px; background:var(--success); color:white; border:none; border-radius:12px; font-weight:bold; opacity:0.3; font-size:1.1em;">CONFIRM SALE</button>
-    </div>
-</div>
-
-<div id="view-inv" class="view-section">
-    <div class="form-panel">
-        <h4 id="form-title" style="margin:0 0 15px 0;">New Product Entry</h4>
-        
-        <span class="label-text">Product Name</span>
-        <div class="input-group no-₱"><input type="text" id="p-name" placeholder="Milo 22g"></div>
-        
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-            <div>
-                <span class="label-text">Cost per Pack</span>
-                <div class="input-group"><span class="currency-mark">₱</span><input type="number" id="p-cost" oninput="calcRecommended()" step="0.01" min="0"></div>
+    <div id="app">
+        <div class="sticky-container">
+            <div class="stats-grid">
+                <div class="stat-box"><small>Capital</small><strong id="totalCost">₱0.00</strong></div>
+                <div class="stat-box"><small>Inv. Value</small><strong id="totalSell">₱0.00</strong></div>
+                <div class="stat-box"><small>Sales</small><strong id="weeklySales" style="color:#28a745">₱0.00</strong></div>
+                <div class="stat-box"><small>Profit</small><strong id="weeklyProfit" style="color:#17a2b8">₱0.00</strong></div>
             </div>
-            <div>
-                <span class="label-text">Pc per Pack</span>
-                <div class="input-group no-₱"><input type="number" id="p-pcs" oninput="calcRecommended()" min="1"></div>
-            </div>
-            <div>
-                <span class="label-text">Markup %</span>
-                <div class="input-group no-₱"><input type="number" id="p-markup" value="12" oninput="calcRecommended()"></div>
-            </div>
-            <div>
-                <span class="label-text">Selling Price</span>
-                <div class="input-group"><span class="currency-mark">₱</span><input type="number" id="p-sell" step="0.01" min="0"></div>
+            <div class="tabs">
+                <button class="tab-btn active" id="btnPos" onclick="switchTab('pos')">🛒 Checkout</button>
+                <button class="tab-btn" id="btnInv" onclick="switchTab('inventory')">📦 Inventory</button>
             </div>
         </div>
 
-        <div style="background:#eef6ff; padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border:1px solid #cce3ff;">
-            <span style="font-size:0.75em; font-weight:bold; color:#004085;">Recommended Price: <span id="rec-val">₱0.00</span></span>
-            <button onclick="applyRecommended()" style="background:var(--primary); color:white; border:none; padding:6px 14px; border-radius:6px; font-size:0.7em; font-weight:bold; cursor:pointer;">USE</button>
-        </div>
-
-        <div style="display:flex; gap:10px;">
-            <button onclick="saveProduct()" id="save-main" style="flex:1; padding:15px; background:var(--primary); color:white; border:none; border-radius:10px; font-weight:bold;">SAVE PRODUCT</button>
-            <button onclick="resetProductForm()" style="flex:1; padding:15px; background:#6c757d; color:white; border:none; border-radius:10px; font-weight:bold;">CANCEL</button>
-        </div>
-    </div>
-
-    <div id="inventory-grid"></div>
-</div>
-
-<div id="receipt-modal" class="overlay">
-    <div class="receipt-box">
-        <div style="text-align:center; font-weight:bold; border-bottom:1px dashed #000; padding-bottom:10px; margin-bottom:15px;">SALE RECEIPT</div>
-        <div id="receipt-content" style="white-space:pre-wrap; font-size:0.85em; line-height:1.5;"></div>
-        <button onclick="document.getElementById('receipt-modal').style.display='none'" style="width:100%; padding:15px; background:var(--dark); color:white; border:none; margin-top:20px; font-weight:bold; border-radius:6px;">CLOSE</button>
-    </div>
-</div>
-
-<div class="sync-badge">
-    <div id="sync-spinner" class="loader-spin"></div>
-    <span id="sync-status">Cloud Ready</span>
-</div>
-
-<button class="logout-link" onclick="handleLogout()">Logout / Clear App Data</button>
-<button onclick="triggerSync()" style="position:fixed; bottom:20px; right:20px; width:55px; height:55px; border-radius:50%; background:var(--success); border:none; color:white; font-size:24px; box-shadow:0 4px 15px rgba(0,0,0,0.3); z-index:2500; cursor:pointer;">☁️</button>
-
-<script>
-    /* 15, 16. Negative Number Prevention handled by min="0" and logic checks */
-    let products = [], salesData = [], cartData = [], editIndex = -1, unsavedChanges = false;
-    const G_CONFIG = JSON.parse(localStorage.getItem('mp_config'));
-
-    // 11. Alert before refresh
-    window.onbeforeunload = (e) => { if(unsavedChanges) return "You have unsaved changes!"; };
-
-    if(!G_CONFIG) {
-        document.getElementById('setup-screen').style.display = 'block';
-    } else {
-        init();
-    }
-
-    function fPHP(val) { return '₱' + parseFloat(val || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
-
-    async function init() {
-        await loadDataFromCloud();
-        renderInventory();
-        drawPOS();
-    }
-
-    function showTab(t) {
-        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.tab-trigger').forEach(b => b.classList.remove('active'));
-        document.getElementById('view-'+t).classList.add('active');
-        document.getElementById('tab-'+t).classList.add('active');
-        if(t==='inv') renderInventory(); else drawPOS();
-    }
-
-    // 1f. Milo logic Unit Cost calculation
-    function calcRecommended() {
-        const cost = parseFloat(document.getElementById('p-cost').value) || 0;
-        const pcs = parseInt(document.getElementById('p-pcs').value) || 1;
-        const markup = parseFloat(document.getElementById('p-markup').value) || 0;
-        const rec = (cost / pcs) * (1 + (markup / 100));
-        document.getElementById('rec-val').innerText = fPHP(rec);
-        return rec;
-    }
-
-    function applyRecommended() {
-        const val = calcRecommended();
-        if(val > 0) document.getElementById('p-sell').value = val.toFixed(2);
-    }
-
-    function saveProduct() {
-        const name = document.getElementById('p-name').value.trim();
-        const cost = parseFloat(document.getElementById('p-cost').value) || 0;
-        const pcs = parseInt(document.getElementById('p-pcs').value) || 0;
-        const sell = parseFloat(document.getElementById('p-sell').value) || 0;
-
-        if(!name || sell <= 0) { alert("Invalid Entry"); return; }
-        
-        let unitCost = (cost > 0 && pcs > 0) ? (cost / pcs) : 0;
-
-        if(editIndex > -1) {
-            // If cost field is blank during EDIT, preserve existing unit cost
-            if(cost === 0) unitCost = products[editIndex].unitCost;
-            products[editIndex] = { ...products[editIndex], name, sell, unitCost };
-        } else {
-            // 1g. Max stock 50 threshold for NEW item entries
-            if(pcs > 50) { alert("Maximum entry stock threshold is 50."); return; }
-            if(pcs < 0) { alert("Negative numbers not allowed."); return; }
-            products.push({ name, unitCost, qty: pcs, sell });
-        }
-
-        unsavedChanges = true;
-        resetProductForm();
-        saveLocal();
-        renderInventory();
-    }
-
-    function renderInventory() {
-        let tCap = 0, tVal = 0;
-        const grid = document.getElementById('inventory-grid');
-        grid.innerHTML = products.map((item, i) => {
-            tCap += (item.unitCost * item.qty);
-            tVal += (item.sell * item.qty);
-            
-            // 1d. Logic for Low/Red Stock
-            const isLow = item.qty > 0 && item.qty <= 3;
-            const isOut = item.qty <= 0;
-            
-            return `
-            <div class="p-card ${isLow ? 'low-stock' : ''} ${isOut ? 'no-stock' : ''}">
-                ${isOut ? '<div class="sold-out-tag">SOLD OUT</div>' : ''}
-                <div class="p-card-content">
-                    <div style="font-weight:700; font-size:0.85em; height:38px; overflow:hidden;">${item.name}</div>
-                    <div class="p-card-price">${fPHP(item.sell)}</div>
-                    <div style="font-size:0.75em;">Stock: <b>${item.qty}</b></div>
-                    <div class="p-card-meta">Cost: ${fPHP(item.unitCost)} | Prof: ${fPHP(item.sell - item.unitCost)}</div>
+        <div id="viewPos" class="view active">
+            <div class="pos-grid">
+                <div>
+                    <div class="sticky-search">
+                        <input type="text" id="posSearch" placeholder="🔍 Search product..." oninput="renderPOS()">
+                    </div>
+                    <table style="width:100%; border-collapse: collapse; background:white; border-radius:8px; overflow:hidden;">
+                        <thead style="background:#eee; font-size: 0.8em;">
+                            <tr><th style="padding:10px; text-align:left;">Item Name</th><th style="text-align:right; padding:10px;">Price</th><th style="padding:10px;">Stock</th><th></th></tr>
+                        </thead>
+                        <tbody id="posBody"></tbody>
+                    </table>
                 </div>
-                <div class="p-card-btns">
-                    <button class="btn-action" style="background:var(--info)" onclick="editProduct(${i})">Edit</button>
-                    <button class="btn-action" style="background:var(--dark)" onclick="copyProduct(${i})">Copy</button>
-                    <button class="btn-action" style="background:var(--success)" onclick="restockItem(${i})">Restock</button>
-                    <button class="btn-action" style="background:var(--danger)" onclick="deleteProduct(${i})">Del</button>
+                <div style="background:white; padding:15px; border-radius:12px; height:fit-content; position: sticky; top: 135px; border:1px solid #ddd;">
+                    <h3 style="margin:0">Cart</h3>
+                    <div id="cartList" style="margin:10px 0; border-bottom:1px solid #eee; max-height: 200px; overflow-y: auto;"></div>
+                    <div style="font-size:1.5em; font-weight:bold; text-align:right;" id="grandTotal">₱0.00</div>
+                    
+                    <div class="cash-presets">
+                        <button class="cash-btn" onclick="setCash(20)">₱20.00</button>
+                        <button class="cash-btn" onclick="setCash(50)">₱50.00</button>
+                        <button class="cash-btn" onclick="setCash(100)">₱100.00</button>
+                        <button class="cash-btn" onclick="setCash(500)">₱500.00</button>
+                        <button class="cash-btn" onclick="setCash(1000)">₱1k</button>
+                    </div>
+                    <div class="input-wrapper">
+                        <input type="number" step="0.01" id="amtPaid" placeholder="Amount Paid" oninput="calcPayment()">
+                    </div>
+                    <div id="payStatus" class="pay-status" style="background:#eee">Enter Amount</div>
+                    <button onclick="completeSale()" style="width:100%; padding:15px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Confirm</button>
                 </div>
-            </div>`;
-        }).join('');
+            </div>
+        </div>
 
-        document.getElementById('dash-cap').innerText = fPHP(tCap);
-        document.getElementById('dash-val').innerText = fPHP(tVal);
-        updateDashboardNumbers();
-    }
+        <div id="viewInv" class="view">
+            <div id="formSection" style="background:white; padding:15px; border-radius:12px; margin-bottom:20px; border: 1px solid #ddd;">
+                <h3 id="formTitle" style="margin:0 0 10px 0; font-size: 1em;">Add New Product</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0 8px;">
+                    <div class="field-group" style="grid-column: span 2;">
+                        <label>Product Name</label>
+                        <input type="text" id="name" placeholder="e.g. Milo 22g">
+                    </div>
+                    <div class="field-group">
+                        <label>Cost</label>
+                        <div class="input-wrapper"><input type="number" step="0.01" id="cost" placeholder="0.00" oninput="calcRec()"></div>
+                    </div>
+                    <div class="field-group">
+                        <label>Qty</label>
+                        <input type="number" id="qty" placeholder="0" oninput="calcRec()">
+                    </div>
+                    <div class="field-group">
+                        <label>Markup %</label>
+                        <input type="number" id="markup" value="12" oninput="calcRec()">
+                    </div>
+                    <div class="field-group">
+                        <label>Selling Price</label>
+                        <div class="input-wrapper"><input type="number" step="0.01" id="sell" placeholder="0.00"></div>
+                    </div>
+                </div>
+                <div class="rec-note">
+                    <span>Recommended Price: <b id="recVal">₱0.00</b></span>
+                    <button class="use-btn" onclick="useRec()">USE</button>
+                </div>
+                
+                <div style="display:flex; gap:8px; margin-top:5px;">
+                    <button onclick="addItem()" id="mainBtn" style="flex:1; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">SAVE PRODUCT</button>
+                    <button onclick="clearForm()" style="flex:1; padding:12px; background:#6c757d; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">CANCEL</button>
+                </div>
+            </div>
 
-    function drawPOS() {
-        const query = document.getElementById('pos-search').value.toLowerCase();
-        document.getElementById('pos-body').innerHTML = products.filter(p => p.name.toLowerCase().includes(query)).map(p => {
-            const idx = products.indexOf(p);
-            return `<tr>
-                <td><b>${p.name}</b></td>
-                <td>${fPHP(p.sell)}</td>
-                <td align="center">${p.qty}</td>
-                <td><button onclick="addToCart(${idx})" ${p.qty<=0?'disabled':''} style="background:var(--primary); color:white; border:none; border-radius:6px; padding:8px 15px; font-weight:bold;">ADD</button></td>
-            </tr>`;
-        }).join('');
-    }
+            <input type="text" id="searchBar" placeholder="🔍 Search inventory..." oninput="render()" style="margin-bottom:15px;">
+            <div id="list"></div>
 
-    function addToCart(idx) {
-        // 2c. Cart popup quantity
-        const n = parseInt(prompt(`How many ${products[idx].name} being bought?`, "1"));
-        if(!n || n <= 0) return;
-        if(n > products[idx].qty) { alert("Insufficient Stock!"); return; }
-        
-        const existing = cartData.find(c => c.idx === idx);
-        if(existing) existing.buyQty += n;
-        else cartData.push({...products[idx], buyQty: n, idx});
-        
-        renderCartUI();
-    }
+            <button onclick="logout()" style="width:100%; margin-top:30px; padding:12px; background:none; border: 1px solid var(--danger); color:var(--danger); border-radius:8px; font-weight:bold;">LOGOUT</button>
+        </div>
 
-    function renderCartUI() {
-        let total = 0;
-        document.getElementById('cart-items').innerHTML = cartData.map(c => {
-            total += (c.sell * c.buyQty);
-            return `<div style="display:flex; justify-content:space-between; padding:5px 0; font-size:0.9em;">
-                <span>${c.name} x${c.buyQty}</span>
-                <b>${fPHP(c.sell * c.buyQty)}</b>
-            </div>`;
-        }).join('');
-        document.getElementById('cart-total').innerText = fPHP(total);
-        calcChange();
-    }
+        <div class="fab-container">
+            <span id="syncStatus" style="font-size: 10px; background: black; color: white; padding: 2px 8px; border-radius: 20px; text-align: center;">Cloud Last Synced: ---</span>
+            <button class="fab" style="background:#6c757d" title="Refresh" onclick="fetchData()">🔄</button>
+            <button class="fab" id="cloudBtn" style="background:var(--success)" title="Sync to Repo (Cloud)" onclick="syncToCloud()">☁️</button>
+        </div>
+    </div>
 
-    function quickPay(val) {
-        const inp = document.getElementById('cash-input');
-        inp.value = ((parseFloat(inp.value) || 0) + val).toFixed(2);
-        calcChange();
-    }
+    <script>
+        let inventory = [];
+        let salesHistory = [];
+        let cart = [];
+        let editingIndex = -1;
+        let isDirty = false;
+        let config = JSON.parse(localStorage.getItem('inv_config'));
 
-    function calcChange() {
-        const total = cartData.reduce((a, b) => a + (b.sell * b.buyQty), 0);
-        const paid = parseFloat(document.getElementById('cash-input').value) || 0;
-        const btn = document.getElementById('confirm-sale-btn');
-        const msg = document.getElementById('change-status');
-
-        if(total === 0) {
-            btn.disabled = true; btn.style.opacity = 0.3;
-            msg.innerText = "Cart Empty"; return;
+        // Handle initial login check
+        if (!config) { 
+            document.getElementById('setup').style.display = 'block'; 
+            document.getElementById('app').style.display = 'none';
+        } else { 
+            fetchData(); 
         }
 
-        if(paid < total) {
-            msg.innerText = "Payment Short: " + fPHP(total - paid);
-            msg.style.color = "var(--danger)";
-            btn.disabled = true; btn.style.opacity = 0.3;
-        } else {
-            msg.innerText = "Change Due: " + fPHP(paid - total);
-            msg.style.color = "var(--success)";
-            btn.disabled = false; btn.style.opacity = 1;
-        }
-    }
-
-    function finalizeSale() {
-        const total = cartData.reduce((a, b) => a + (b.sell * b.buyQty), 0);
-        const paid = parseFloat(document.getElementById('cash-input').value) || 0;
-        let receiptText = `TRX: ${new Date().toLocaleTimeString()}\n--------------------------\n`;
-        
-        cartData.forEach(c => {
-            const p = products[c.idx];
-            // 17. Profit Drifting fix: calculate at point of sale
-            salesData.push({
-                rev: c.sell * c.buyQty,
-                prof: (c.sell - p.unitCost) * c.buyQty,
-                time: Date.now()
-            });
-            p.qty -= c.buyQty;
-            receiptText += `${c.name.substring(0,15).padEnd(15)} x${c.buyQty} ${fPHP(c.sell*c.buyQty).padStart(8)}\n`;
+        // 11. Page refresh warning
+        window.addEventListener('beforeunload', (e) => {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes!';
+            }
         });
 
-        receiptText += `--------------------------\nTOTAL:   ${fPHP(total).padStart(17)}\nCASH:    ${fPHP(paid).padStart(17)}\nCHANGE:  ${fPHP(paid-total).padStart(17)}\n--------------------------`;
-        
-        document.getElementById('receipt-content').innerText = receiptText;
-        document.getElementById('receipt-modal').style.display = 'flex';
+        function formatPHP(num) { return '₱' + parseFloat(num).toFixed(2); }
 
-        cartData = [];
-        document.getElementById('cash-input').value = '';
-        unsavedChanges = true;
-        saveLocal();
-        drawPOS();
-        renderCartUI();
-    }
-
-    // 5, 6, 8, 12. Cloud & Sync Logic
-    async function triggerSync() {
-        if(!G_CONFIG) return;
-        const spin = document.getElementById('sync-spinner');
-        const txt = document.getElementById('sync-status');
-        spin.style.display = 'inline-block';
-        txt.innerText = "Syncing...";
-        
-        try {
-            const url = `https://api.github.com/repos/${G_CONFIG.repo}/contents/data.json`;
-            const headers = { 'Authorization': `Bearer ${G_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' };
-            const check = await fetch(url, { headers });
-            const sha = check.ok ? (await check.json()).sha : null;
-            const content = btoa(unescape(encodeURIComponent(JSON.stringify({ products, salesData }))));
-            
-            const put = await fetch(url, {
-                method: 'PUT',
-                headers,
-                body: JSON.stringify({ message: "AutoSync Manager", content, sha: sha || undefined })
-            });
-            
-            if(put.ok) {
-                unsavedChanges = false;
-                txt.innerText = "Cloud Synced " + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            } else throw Error();
-        } catch(e) {
-            txt.innerText = "Sync Failed (Offline)";
-        } finally {
-            spin.style.display = 'none';
+        function switchTab(tab) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tab === 'pos' ? 'viewPos' : 'viewInv').classList.add('active');
+            document.getElementById(tab === 'pos' ? 'btnPos' : 'btnInv').classList.add('active');
+            render(); renderPOS();
         }
-    }
 
-    async function loadDataFromCloud() {
-        if(!G_CONFIG) return;
-        try {
-            const r = await fetch(`https://api.github.com/repos/${G_CONFIG.repo}/contents/data.json`, {
-                headers: { 'Authorization': `Bearer ${G_CONFIG.token}` }
+        function calcRec() {
+            const cost = parseFloat(document.getElementById('cost').value) || 0;
+            const qty = parseFloat(document.getElementById('qty').value) || 1;
+            const markup = parseFloat(document.getElementById('markup').value) || 0;
+            const currentRec = ((cost / qty) * (1 + (markup / 100)));
+            document.getElementById('recVal').innerText = formatPHP(currentRec);
+            return currentRec;
+        }
+        function useRec() { 
+            const val = calcRec();
+            document.getElementById('sell').value = val.toFixed(2); 
+        }
+
+        function clearForm() {
+            editingIndex = -1;
+            document.getElementById('formTitle').innerText = "Add New Product";
+            ['name','cost','qty','sell'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('markup').value = "12";
+            document.getElementById('recVal').innerText = "₱0.00";
+        }
+
+        function render() {
+            const listDiv = document.getElementById('list');
+            const search = document.getElementById('searchBar').value.toLowerCase();
+            let sumCost = 0; let sumSell = 0;
+
+            inventory.forEach(item => {
+                sumCost += parseFloat(item.cost) || 0;
+                sumSell += (parseFloat(item.sell) * item.qty) || 0;
             });
-            if(r.ok) {
-                const d = await r.json();
-                const json = JSON.parse(decodeURIComponent(escape(atob(d.content))));
-                products = json.products || [];
-                salesData = json.salesData || [];
-                document.getElementById('sync-status').innerText = "Cloud Connected";
+
+            document.getElementById('totalCost').innerText = formatPHP(sumCost);
+            document.getElementById('totalSell').innerText = formatPHP(sumSell);
+
+            const filtered = inventory.filter(i => i.name.toLowerCase().includes(search));
+            listDiv.innerHTML = filtered.map((item) => {
+                const actualIdx = inventory.indexOf(item);
+                const unitCost = item.cost / (item.qtyInitial || item.qty || 1);
+                const isLow = item.qty > 0 && item.qty <= 3;
+                const isOut = item.qty <= 0;
+
+                return `
+                <div class="card ${isLow ? 'low-stock' : ''} ${isOut ? 'out-of-stock' : ''}">
+                    <div class="sold-out-badge">SOLD OUT</div>
+                    <div class="card-header">${item.name}</div>
+                    <div class="card-body">
+                        <span class="price-tag">${formatPHP(item.sell)}</span>
+                        <div style="font-size:0.75em; color:#666; margin-bottom:4px;">Profit: <span style="color:var(--success)">+${(item.sell - unitCost).toFixed(2)}</span></div>
+                        <div style="font-weight:bold; font-size: 0.9em;">Stock: ${item.qty}</div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="act-btn" style="background:var(--info)" onclick="restockItem(${actualIdx})">Restock</button>
+                        <button class="act-btn" style="background:var(--warning); color:black" onclick="editItem(${actualIdx})">Edit</button>
+                        <button class="act-btn" style="background:var(--primary)" onclick="copyItem(${actualIdx})">Copy</button>
+                        <button class="act-btn" style="background:var(--danger)" onclick="deleteItem(${actualIdx})">Delete</button>
+                    </div>
+                </div>`;
+            }).join('');
+            updateDashboard();
+        }
+
+        function renderPOS() {
+            const search = document.getElementById('posSearch').value.toLowerCase();
+            const body = document.getElementById('posBody');
+            body.innerHTML = inventory.filter(i => i.name.toLowerCase().includes(search)).map(item => {
+                const idx = inventory.indexOf(item);
+                return `
+                <tr style="border-bottom:1px solid #eee; ${item.qty <= 0 ? 'opacity:0.3' : ''}">
+                    <td style="padding:10px; font-size:0.9em;"><b>${item.name}</b></td>
+                    <td style="text-align:right; padding:10px;">${formatPHP(item.sell)}</td>
+                    <td style="text-align:center; padding:10px; font-weight:bold;">${item.qty}</td>
+                    <td style="text-align:right; padding:10px;">
+                        <button onclick="addToCart(${idx})" ${item.qty <= 0 ? 'disabled' : ''} style="background:var(--primary); color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">+ Add</button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function addToCart(idx) {
+            const item = inventory[idx];
+            let count = prompt(`How many "${item.name}" are being bought?`, "1");
+            if (count === null) return;
+            count = parseInt(count);
+            if (isNaN(count) || count <= 0) return alert("Invalid quantity");
+            if (count > item.qty) return alert(`Only ${item.qty} left in stock!`);
+
+            const inCart = cart.find(c => c.idx === idx);
+            if (inCart) {
+                if (inCart.buyQty + count <= item.qty) inCart.buyQty += count;
+                else alert("Not enough stock for that total.");
+            } else { cart.push({...item, buyQty: count, idx: idx}); }
+            renderCart();
+        }
+
+        function renderCart() {
+            const list = document.getElementById('cartList');
+            let total = 0;
+            list.innerHTML = cart.map((item, i) => {
+                total += (item.sell * item.buyQty);
+                return `<div style="display:flex; justify-content:space-between; font-size:0.85em; padding:5px 0; border-bottom: 1px dashed #eee;">
+                    <span>${item.name} x${item.buyQty}</span>
+                    <span>${formatPHP(item.sell * item.buyQty)} <button onclick="cart.splice(${i},1);renderCart()" style="color:red; border:none; background:none; cursor:pointer;">✕</button></span>
+                </div>`;
+            }).join('');
+            document.getElementById('grandTotal').innerText = formatPHP(total);
+            calcPayment();
+        }
+
+        function setCash(amt) {
+            document.getElementById('amtPaid').value = amt.toFixed(2);
+            calcPayment();
+        }
+
+        function calcPayment() {
+            const total = cart.reduce((sum, i) => sum + (i.sell * i.buyQty), 0);
+            const paid = parseFloat(document.getElementById('amtPaid').value) || 0;
+            const status = document.getElementById('payStatus');
+            if(total === 0) { status.innerText = "Cart Empty"; status.style.background="#eee"; status.style.color="#333"; return; }
+            if(paid < total) {
+                status.innerText = "SHORT: " + formatPHP(total - paid);
+                status.style.background = "#f8d7da"; status.style.color = "red";
             } else {
-                // 8. If data missing recreate from local
-                products = JSON.parse(localStorage.getItem('mp_p')) || [];
-                salesData = JSON.parse(localStorage.getItem('mp_s')) || [];
+                status.innerText = "CHANGE: " + formatPHP(paid - total);
+                status.style.background = "#d4edda"; status.style.color = "green";
             }
-        } catch(e) {
-            products = JSON.parse(localStorage.getItem('mp_p')) || [];
-            salesData = JSON.parse(localStorage.getItem('mp_s')) || [];
         }
-    }
 
-    function saveLocal() {
-        localStorage.setItem('mp_p', JSON.stringify(products));
-        localStorage.setItem('mp_s', JSON.stringify(salesData));
-    }
+        function completeSale() {
+            if(!config) { logout(); return; } // Safety check
+            const total = cart.reduce((sum, i) => sum + (i.sell * i.buyQty), 0);
+            const paid = parseFloat(document.getElementById('amtPaid').value) || 0;
+            if(cart.length === 0) return;
+            if(paid < total) return alert("Payment is short!");
 
-    function resetProductForm() {
-        editIndex = -1;
-        document.getElementById('form-title').innerText = "New Product Entry";
-        ['p-name','p-cost','p-pcs','p-sell'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('p-markup').value = '12';
-        document.getElementById('rec-val').innerText = "₱0.00";
-    }
-
-    function editProduct(i) {
-        editIndex = i;
-        const it = products[i];
-        document.getElementById('form-title').innerText = "Edit Product";
-        document.getElementById('p-name').value = it.name;
-        document.getElementById('p-sell').value = it.sell.toFixed(2);
-        document.getElementById('p-cost').value = '';
-        document.getElementById('p-pcs').value = '';
-        window.scrollTo(0,0);
-    }
-
-    function copyProduct(i) {
-        editIndex = -1;
-        const it = products[i];
-        document.getElementById('form-title').innerText = "Copy Existing";
-        document.getElementById('p-name').value = it.name + " (Copy)";
-        document.getElementById('p-sell').value = it.sell.toFixed(2);
-        document.getElementById('p-cost').value = (it.unitCost * 10).toFixed(2);
-        document.getElementById('p-pcs').value = 10;
-        calcRecommended();
-        window.scrollTo(0,0);
-    }
-
-    function restockItem(i) {
-        const val = prompt(`Add units to ${products[i].name}:`, "0");
-        if(val === null) return;
-        const add = parseInt(val);
-        if(add < 0) return alert("Negative stock not allowed.");
-        products[i].qty += add;
-        unsavedChanges = true;
-        saveLocal();
-        renderInventory();
-    }
-
-    function deleteProduct(i) {
-        if(confirm(`Delete ${products[i].name}?`)) {
-            products.splice(i, 1);
-            unsavedChanges = true;
-            saveLocal();
-            renderInventory();
+            cart.forEach(c => {
+                const item = inventory[c.idx];
+                const unitCost = item.cost / (item.qtyInitial || item.qty || 1);
+                salesHistory.push({ revenue: c.sell * c.buyQty, profit: (c.sell - unitCost) * c.buyQty, date: new Date().toISOString() });
+                item.qty -= c.buyQty;
+            });
+            
+            isDirty = true;
+            cart = []; document.getElementById('amtPaid').value = '';
+            render(); renderPOS(); renderCart(); alert("Sale Completed!");
         }
-    }
 
-    function updateDashboardNumbers() {
-        const sTotal = salesData.reduce((a, b) => a + b.rev, 0);
-        const pTotal = salesData.reduce((a, b) => a + b.prof, 0);
-        document.getElementById('dash-sales').innerText = fPHP(sTotal);
-        document.getElementById('dash-profit').innerText = fPHP(pTotal);
-    }
+        function updateDashboard() {
+            const sales = salesHistory.reduce((sum, s) => sum + s.revenue, 0);
+            const profit = salesHistory.reduce((sum, s) => sum + s.profit, 0);
+            document.getElementById('weeklySales').innerText = formatPHP(sales);
+            document.getElementById('weeklyProfit').innerText = formatPHP(profit);
+        }
 
-    function saveInitConfig() {
-        const t = document.getElementById('cfg-token').value.trim();
-        const r = document.getElementById('cfg-repo').value.trim();
-        if(t && r) {
-            localStorage.setItem('mp_config', JSON.stringify({token: t, repo: r}));
-            location.reload();
-        } else alert("Fill both fields");
-    }
+        async function fetchData() {
+            if(!config) return;
+            const syncIcon = document.querySelector('.fab[title="Refresh"]');
+            syncIcon.classList.add('syncing');
+            try {
+                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${config.token}` }
+                });
+                if(res.ok) {
+                    const file = await res.json();
+                    const content = JSON.parse(decodeURIComponent(escape(atob(file.content))));
+                    inventory = content.inventory || [];
+                    salesHistory = content.salesHistory || [];
+                    document.getElementById('syncStatus').innerText = "Cloud Synced: " + new Date().toLocaleTimeString();
+                    render(); renderPOS();
+                }
+            } catch (e) { console.error("Fetch failed", e); }
+            syncIcon.classList.remove('syncing');
+        }
 
-    function handleLogout() { if(confirm("This will clear local cache and logout. Continue?")) { localStorage.clear(); location.reload(); } }
+        async function syncToCloud() {
+            if(!config) { logout(); return; }
+            const btn = document.getElementById('cloudBtn');
+            btn.classList.add('syncing');
+            try {
+                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+                    headers: { 'Authorization': `Bearer ${config.token}` }
+                });
+                const file = await res.json();
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify({ inventory, salesHistory }))));
+                const update = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${config.token}` },
+                    body: JSON.stringify({ message: "Cloud Update", content, sha: file.sha })
+                });
+                if(update.ok) {
+                    isDirty = false;
+                    document.getElementById('syncStatus').innerText = "Saved: " + new Date().toLocaleTimeString();
+                }
+            } catch (e) { alert("Sync failed. Check connection."); }
+            btn.classList.remove('syncing');
+        }
 
-    // 12. Smart Sync every 5 mins
-    setInterval(() => { if(unsavedChanges) triggerSync(); }, 300000);
+        // 12. Smart Sync every 5 mins
+        setInterval(() => { if (config && isDirty) syncToCloud(); }, 300000);
 
-</script>
+        function saveConfig() {
+            const token = document.getElementById('ghToken').value;
+            const repo = document.getElementById('ghRepo').value;
+            if(token && repo) { 
+                localStorage.setItem('inv_config', JSON.stringify({token, repo})); 
+                location.reload(); 
+            } else {
+                alert("Both fields are required.");
+            }
+        }
+
+        function logout() {
+            if(confirm("Logout and clear configuration?")) {
+                localStorage.removeItem('inv_config');
+                location.reload();
+            }
+        }
+
+        function addItem() {
+            if(!config) { logout(); return; }
+            const n = document.getElementById('name').value;
+            const c = parseFloat(document.getElementById('cost').value) || 0;
+            const q = parseFloat(document.getElementById('qty').value) || 0;
+            const s = parseFloat(document.getElementById('sell').value) || 0;
+            if(!n) return alert("Product name is required");
+            const obj = { name: n, cost: c, qty: q, qtyInitial: q, sell: s };
+            if(editingIndex > -1) inventory[editingIndex] = obj; else inventory.push(obj);
+            isDirty = true;
+            clearForm(); render();
+        }
+
+        function editItem(idx) {
+            editingIndex = idx;
+            const item = inventory[idx];
+            document.getElementById('formTitle').innerText = "Editing: " + item.name;
+            document.getElementById('name').value = item.name;
+            document.getElementById('cost').value = item.cost;
+            document.getElementById('qty').value = item.qty;
+            document.getElementById('sell').value = item.sell;
+            calcRec();
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        function copyItem(idx) {
+            const item = inventory[idx];
+            document.getElementById('formTitle').innerText = "Copying Product";
+            document.getElementById('name').value = item.name + " (Copy)";
+            document.getElementById('cost').value = item.cost;
+            document.getElementById('qty').value = item.qty;
+            document.getElementById('sell').value = item.sell;
+            calcRec();
+            editingIndex = -1;
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        function deleteItem(idx) { 
+            if(confirm("Delete this product forever?")) { inventory.splice(idx,1); isDirty = true; render(); } 
+        }
+
+        function restockItem(idx) { 
+            const amt = prompt("How many units to add?"); 
+            if(amt && !isNaN(amt)) { 
+                inventory[idx].qty += parseInt(amt); 
+                inventory[idx].qtyInitial = (inventory[idx].qtyInitial || 0) + parseInt(amt);
+                isDirty = true; render(); 
+            } 
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log("SW failed", err));
+        }
+    </script>
 </body>
 </html>
