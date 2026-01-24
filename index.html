@@ -386,6 +386,10 @@
             isDirty = true;
             cart = []; 
             document.getElementById('amtPaid').value = '';
+            
+            // 🔹 Save updated inventory & salesHistory for offline mode
+            localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory }));
+
             render(); renderPOS(); renderCart(); 
             alert("Sale Completed!");
         }
@@ -401,6 +405,7 @@
             if(!config) return;
             const syncIcon = document.querySelector('.fab[title="Refresh"]');
             syncIcon.classList.add('syncing');
+        
             try {
                 const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
                     headers: { 'Authorization': `Bearer ${config.token}` }
@@ -410,12 +415,32 @@
                     const content = JSON.parse(decodeURIComponent(escape(atob(file.content))));
                     inventory = content.inventory || [];
                     salesHistory = content.salesHistory || [];
+        
+                    // 🔹 Save for offline use
+                    localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory }));
+        
                     document.getElementById('syncStatus').innerText = "Cloud Synced: " + new Date().toLocaleTimeString();
-                    render(); renderPOS();
                 }
-            } catch (e) { console.error("Fetch failed", e); }
-            syncIcon.classList.remove('syncing');
-        }
+            } catch (e) {
+                console.warn("Offline mode activated, using localStorage");
+        
+                const offline = JSON.parse(localStorage.getItem('offline_data'));
+                if(offline) {
+                    inventory = offline.inventory || [];
+                    salesHistory = offline.salesHistory || [];
+                    document.getElementById('syncStatus').innerText = "Offline Mode";
+                } else {
+                    inventory = [];
+                    salesHistory = [];
+                    document.getElementById('syncStatus').innerText = "No data available offline";
+                }
+            }
+
+    render(); 
+    renderPOS();
+    syncIcon.classList.remove('syncing');
+}
+
 
         async function syncToCloud() {
             if(!config) { logout(); return; }
@@ -513,6 +538,10 @@
             }
 
             isDirty = true;
+            
+            // 🔹 Save for offline mode immediately
+            localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory }));
+            
             clearForm();
             render();
         } 
@@ -545,7 +574,14 @@
         }
 
         function deleteItem(idx) { 
-            if(confirm("Delete this product forever?")) { inventory.splice(idx,1); isDirty = true; render(); } 
+            if(confirm("Delete this product forever?")) { 
+                inventory.splice(idx,1); 
+                isDirty = true;
+                
+                localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory }));
+                
+                render(); 
+            } 
         }
 
         // FIX: Adjusted restock to keep unitCost stable
@@ -554,7 +590,10 @@
             if(amt && !isNaN(amt)) { 
                 inventory[idx].qty += parseInt(amt); 
                 // We DON'T change qtyInitial here because that would change the old unitCost calculation
-                isDirty = true; 
+                isDirty = true;
+                
+                localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory }));
+
                 render(); 
             } 
         }
