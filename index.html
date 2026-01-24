@@ -240,15 +240,98 @@
         }
 
         function addItem() {
-            const n = document.getElementById('name').value;
-            const q = document.getElementById('qty').value;
-            const c = document.getElementById('cost').value;
-            const s = document.getElementById('sell').value;
-            if (!n || !q || !c) return;
-            inventory.push({ name: n, qty: q, cost: c, sell: s, markup: document.getElementById('markup').value });
-            render();
-            ['name','qty','cost','sell'].forEach(id => document.getElementById(id).value = '');
-        }
+                    const n = document.getElementById('name').value.trim();
+                    const q = parseFloat(document.getElementById('qty').value) || 0;
+                    const c = parseFloat(document.getElementById('cost').value) || 0;
+                    const s = parseFloat(document.getElementById('sell').value) || 0;
+                    const m = document.getElementById('markup').value;
+        
+                    // 1. Validation for Empty Fields
+                    if (!n || !q || !c) {
+                        alert("Please fill in all fields.");
+                        return;
+                    }
+        
+                    // 2. Validation for 0 or Negative Numbers
+                    if (q <= 0 || c <= 0 || s <= 0) {
+                        alert("Quantity, Cost, and Sell Price must be greater than 0.");
+                        return;
+                    }
+        
+                    // 3. Validation for Duplicate Names
+                    const isDuplicate = inventory.some(item => item.name.toLowerCase() === n.toLowerCase());
+                    if (isDuplicate) {
+                        alert(`"${n}" is already in your inventory. Please update the existing item instead.`);
+                        return;
+                    }
+        
+                    // If all checks pass, add the item
+                    inventory.push({ name: n, qty: q, cost: c, sell: s, markup: m });
+                    render();
+                    
+                    // Clear inputs
+                    ['name','qty','cost','sell'].forEach(id => document.getElementById(id).value = '');
+                    document.getElementById('unitCostDisp').innerText = "0.00";
+                    document.getElementById('recPrice').innerText = "0.00";
+                }
+        
+                // Updated Render to show Loss Prevention
+                function render() {
+                    const listDiv = document.getElementById('list');
+                    const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+                    let sumCost = 0; let sumSell = 0;
+        
+                    const filtered = inventory.filter(item => {
+                        const match = item.name.toLowerCase().includes(searchTerm);
+                        if (match) {
+                            sumCost += parseFloat(item.cost) || 0;
+                            sumSell += (parseFloat(item.sell) || 0) * (parseFloat(item.qty) || 0);
+                        }
+                        return match;
+                    });
+        
+                    document.getElementById('totalCost').innerText = sumCost.toLocaleString();
+                    document.getElementById('totalSell').innerText = sumSell.toLocaleString();
+        
+                    if (inventory.length === 0) {
+                        listDiv.innerHTML = "<div style='grid-column: 1/-1; text-align:center; opacity:0.5; padding:50px;'>Empty Shelf</div>";
+                        return;
+                    }
+        
+                    listDiv.innerHTML = filtered.map((item, i) => {
+                        const actualIndex = inventory.indexOf(item);
+                        const uCost = (parseFloat(item.cost) / (parseFloat(item.qty) || 1)) || 0;
+                        const profit = parseFloat(item.sell) - uCost;
+                        
+                        // Color coding for profit/loss
+                        const badgeStyle = profit <= 0 
+                            ? "background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;" 
+                            : "background: #e8f5e9; color: #2e7d32;";
+        
+                        return `
+                        <div class="card">
+                            <div class="card-header">
+                                ${item.name}
+                                <button class="del-btn" onclick="deleteItem(${actualIndex})">×</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="unit-cost">Unit Cost: ${uCost.toFixed(2)}</div>
+                                <div style="font-size: 0.8em; color: #555;">Stock: <b>${item.qty}</b></div>
+                                <div class="profit-badge" style="${badgeStyle}">
+                                    ${profit <= 0 ? 'LOSS' : 'PROFIT'}: $${profit.toFixed(2)}
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <input type="number" class="sell-input" value="${item.sell}" onchange="updateField(${actualIndex}, 'sell', this.value)">
+                                <div class="qty-controls">
+                                    <button class="qty-btn" onclick="updateField(${actualIndex}, 'qty', ${parseFloat(item.qty) - 1})">−</button>
+                                    <span>${item.qty}</span>
+                                    <button class="qty-btn" onclick="updateField(${actualIndex}, 'qty', ${parseFloat(item.qty) + 1})">+</button>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                }
 
         function updateField(i, f, v) { if(v < 0 && f === 'qty') v = 0; inventory[i][f] = v; render(); }
         function deleteItem(i) { if(confirm("Delete?")) { inventory.splice(i,1); render(); } }
