@@ -1,4 +1,1 @@
-{
-  "inventory": [{"name":"Camel","qty":20,"qtyInitial":20,"cost":128,"sell":8},{"name":"Milo","qty":10,"qtyInitial":10,"cost":99,"sell":13},{"name":"Mighty","qty":20,"qtyInitial":20,"cost":147,"sell":8}],
-  "salesHistory": []
-}
+{"inventory":[{"name":"Yosi - Camel - Red","cost":128,"qty":20,"qtyInitial":20,"sell":8},{"name":"Drink - Milo","cost":99,"qty":10,"qtyInitial":10,"sell":13},{"name":"Yosi - Mighty - Green","cost":147,"qty":20,"qtyInitial":20,"sell":8},{"name":"Yosi - Fortune - Green","cost":147,"qty":20,"qtyInitial":20,"sell":8}],"salesHistory":[]}
