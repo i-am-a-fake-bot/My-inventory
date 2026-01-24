@@ -402,7 +402,7 @@
                 salesHistory.push({ 
                     revenue: c.sell * c.buyQty, 
                     profit: profitPerUnit * c.buyQty, 
-                    date: new Date().toISOString() 
+                    date: new Date().toISOString(), 
                     details: `${c.name} (x${c.buyQty})` // Adding the name and quantity
                 });
                 item.qty -= c.buyQty;
