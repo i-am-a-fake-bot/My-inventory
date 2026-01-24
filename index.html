@@ -154,13 +154,13 @@
                         <div class="input-wrapper"><input type="number" step="0.01" id="cost" placeholder="0.00" oninput="calcRec()"></div>
                     </div>
                     <div class="field-group">
-                        <label>Units in Pack (Batch)</label>
+                        <label>Units in Pack</label>
                         <input type="number" id="qtyInitial" placeholder="e.g. 12" oninput="calcRec()">
                     </div>
                     <input type="hidden" id="markup" value="12">
                     <div class="field-group">
                         <label>Current Stock</label>
-                        <input type="number" id="qty" placeholder="0">
+                        <input type="number" id="qty" placeholder="e.g. 12">
                     </div>
                     <div class="field-group">
                         <label>Price (SRP)</label>
@@ -268,9 +268,12 @@
             const filtered = inventory.filter(i => i.name.toLowerCase().includes(search));
             listDiv.innerHTML = filtered.map((item) => {
                 const actualIdx = inventory.indexOf(item);
-                const unitCost = item.cost / (item.qtyInitial || item.qty || 1);
+                const unitCost = item.unitCost || (item.cost / (item.qtyInitial || 1));
                 const isLow = item.qty > 0 && item.qty <= 3;
                 const isOut = item.qty <= 0;
+
+                // ✅ Safe quantity display
+                const displayQty = Math.max(0, item.qty);
 
                 return `
                 <div class="card ${isLow ? 'low-stock' : ''} ${isOut ? 'out-of-stock' : ''}">
@@ -479,18 +482,26 @@
             };
         
             if (editingIndex > -1) {
-                // Editing existing item — keep unitCost
+                const existing = inventory[editingIndex];
+                let updateUnitCost = true;
+            
+                if (existing.cost !== capital || existing.qtyInitial !== initial) {
+                    updateUnitCost = confirm(
+                        "Supplier cost or batch size changed. Do you want to update unitCost for this product?"
+                    );
+                }
+            
                 inventory[editingIndex] = {
-                    ...inventory[editingIndex],
+                    ...existing,
                     name: n,
                     cost: capital,
                     qtyInitial: initial,
                     qty: current,
-                    sell: s
-                    // unitCost stays the same
+                    sell: s,
+                    unitCost: updateUnitCost ? capital / initial : existing.unitCost
                 };
             } else {
-                // New item — calculate unitCost
+                // New item
                 inventory.push({
                     name: n,
                     cost: capital,
@@ -500,7 +511,7 @@
                     unitCost: capital / initial
                 });
             }
-            
+
             isDirty = true;
             clearForm();
             render();
@@ -527,6 +538,7 @@
             document.getElementById('cost').value = item.cost;
             document.getElementById('qty').value = item.qty;
             document.getElementById('sell').value = item.sell;
+            document.getElementById('qtyInitial').value = item.qtyInitial || 1;  // ✅ Added this line
             calcRec();
             editingIndex = -1;
             window.scrollTo({top: 0, behavior: 'smooth'});
