@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inventory-v2'; // Changed version to force update
+const CACHE_NAME = 'inventory-v3'; // Changed version to force update
 const ASSETS = [
   './',
   './index.html',
@@ -15,13 +15,17 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // IGNORE GITHUB API CALLS - Always go to network
+
+  // Always go online for GitHub
   if (e.request.url.includes('api.github.com')) {
-    return e.respondWith(fetch(e.request));
+    e.respondWith(fetch(e.request));
+    return;
   }
 
-  // For other files, try Network first, fall back to Cache
+  // App files: network → cache → offline page
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    fetch(e.request)
+      .catch(() => caches.match(e.request))
+      .then(res => res || caches.match('./offline.html'))
   );
 });
