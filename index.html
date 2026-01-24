@@ -356,20 +356,36 @@
             render();
         }
 
-        // --- Sync Functions ---
         async function fetchData() {
             try {
                 const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
                     headers: { 'Authorization': `Bearer ${config.token}` }
                 });
                 const file = await res.json();
-                const raw = JSON.parse(decodeURIComponent(escape(atob(file.content))));
-                inventory = raw.inventory || [];
-                salesHistory = raw.salesHistory || [];
+                const rawData = JSON.parse(decodeURIComponent(escape(atob(file.content))));
+        
+                // --- SMART FIX STARTS HERE ---
+                if (Array.isArray(rawData)) {
+                    // If it's just a list, put it into the 'inventory' slot
+                    inventory = rawData;
+                    salesHistory = [];
+                } else {
+                    // If it's the new format, load both
+                    inventory = rawData.inventory || [];
+                    salesHistory = rawData.salesHistory || [];
+                }
+                // --- SMART FIX ENDS HERE ---
+        
+                const now = new Date();
+                document.getElementById('lastSync').innerText = "Last: " + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 
-                document.getElementById('lastSync').innerText = "Last: " + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                render(); renderPOS();
-            } catch (err) { alert("Load Failed"); }
+                render(); 
+                renderPOS(); 
+                updateWeeklyStats();
+            } catch (err) { 
+                console.error(err);
+                alert("Load Error: Check your data.json format."); 
+            }
         }
 
         async function syncToCloud() {
