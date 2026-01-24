@@ -2,6 +2,7 @@ const CACHE_NAME = 'inventory-v2'; // Changed version to force update
 const ASSETS = [
   './',
   './index.html',
+  './offline.html',
   './manifest.json',
   'https://cdn-icons-png.flaticon.com/512/3081/3081913.png'
 ];
