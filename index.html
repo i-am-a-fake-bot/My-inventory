@@ -104,7 +104,6 @@
             <div class="tabs">
                 <button class="tab-btn active" id="btnPos" onclick="switchTab('pos')">🛒 Checkout</button>
                 <button class="tab-btn" id="btnInv" onclick="switchTab('inventory')">📦 Inventory</button>
-                <button class="tab-btn" id="btnLogs" onclick="switchTab('logs')">📜 Logs</button>
             </div>
         </div>
 
@@ -185,18 +184,6 @@
             <button onclick="logout()" style="width:100%; margin-top:30px; padding:12px; background:none; border: 1px solid var(--danger); color:var(--danger); border-radius:8px; font-weight:bold;">LOGOUT</button>
         </div>
 
-        <div id="viewLogs" class="view">
-            <div style="background:white; padding:15px; border-radius:12px; border: 1px solid #ddd;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <h3 style="margin:0;">Recent Activity</h3>
-                    <button onclick="if(confirm('Clear all logs?')) { salesHistory=[]; isDirty=true; render(); renderLogs(); }" 
-                            style="background:none; border:1px solid #ccc; border-radius:4px; padding:4px 8px; font-size:0.7em; cursor:pointer;">Clear Logs</button>
-                </div>
-                <div id="logContent" style="display: flex; flex-direction: column; gap: 8px;">
-                    </div>
-            </div>
-        </div>
-
         <div class="fab-container">
             <span id="syncStatus" style="font-size: 10px; background: black; color: white; padding: 2px 8px; border-radius: 20px; text-align: center;">Cloud Last Synced: ---</span>
             <button class="fab" style="background:#6c757d" title="Refresh" onclick="fetchData()">🔄</button>
@@ -233,18 +220,8 @@
         function switchTab(tab) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            
-            if(tab === 'pos') {
-                document.getElementById('viewPos').classList.add('active');
-                document.getElementById('btnPos').classList.add('active');
-            } else if(tab === 'inventory') {
-                document.getElementById('viewInv').classList.add('active');
-                document.getElementById('btnInv').classList.add('active');
-            } else if(tab === 'logs') {
-                document.getElementById('viewLogs').classList.add('active');
-                document.getElementById('btnLogs').classList.add('active');
-                renderLogs(); // We call the new log renderer here
-            }
+            document.getElementById(tab === 'pos' ? 'viewPos' : 'viewInv').classList.add('active');
+            document.getElementById(tab === 'pos' ? 'btnPos' : 'btnInv').classList.add('active');
             render(); renderPOS();
         }
 
@@ -398,12 +375,10 @@
                 // Use the locked unitCost instead of calculating it on the fly
                 const profitPerUnit = item.sell - (item.unitCost || 0);
                 
-                // Change your push logic inside the cart.forEach loop to this:
                 salesHistory.push({ 
                     revenue: c.sell * c.buyQty, 
                     profit: profitPerUnit * c.buyQty, 
-                    date: new Date().toISOString(), 
-                    details: `${c.name} (x${c.buyQty})` // Adding the name and quantity
+                    date: new Date().toISOString() 
                 });
                 item.qty -= c.buyQty;
             });
@@ -420,28 +395,6 @@
             const profit = salesHistory.reduce((sum, s) => sum + s.profit, 0);
             document.getElementById('weeklySales').innerText = formatPHP(sales);
             document.getElementById('weeklyProfit').innerText = formatPHP(profit);
-        }
-
-        function renderLogs() {
-            const container = document.getElementById('logContent');
-            if (salesHistory.length === 0) {
-                container.innerHTML = `<p style="text-align:center; color:#888; font-size:0.9em;">No recent activity.</p>`;
-                return;
-            }
-        
-            // Sort newest first and show last 30
-            container.innerHTML = [...salesHistory].reverse().slice(0, 30).map(log => `
-                <div style="padding:10px; background:#f8f9fa; border-left:4px solid ${log.profit >= 0 ? 'var(--success)' : 'var(--danger)'}; border-radius:4px; font-size:0.85em;">
-                    <div style="display:flex; justify-content:space-between; font-weight:bold;">
-                        <span>Sale: ${formatPHP(log.revenue)}</span>
-                        <span style="color:#666; font-size:0.8em;">${new Date(log.date).toLocaleTimeString()}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                        <span style="color:var(--info)">Profit: ${formatPHP(log.profit)}</span>
-                        <span style="color:#999; font-size:0.8em;">${new Date(log.date).toLocaleDateString()}</span>
-                    </div>
-                </div>
-            `).join('');
         }
 
         async function fetchData() {
