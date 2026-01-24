@@ -32,16 +32,20 @@
         .view { display: none; padding: 15px; }
         .view.active { display: block; }
 
-        /* 1a & 1d. Inventory Cards & Colors */
+        /* 1a & 1d. Inventory Cards, Colors & Stamp */
         #list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-        .card { background: white; border-radius: 12px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; position: relative; }
+        .card { background: white; border-radius: 12px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; position: relative; transition: 0.2s; }
+        
+        /* 1d. Color Logic */
         .card.low-stock { background: #fff3cd !important; border-color: #ffeeba; }
         .card.out-of-stock { background: #f8d7da !important; border-color: #f5c6cb; }
         
+        /* THE SOLD OUT STAMP */
         .sold-out-badge { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg);
-            background: var(--danger); color: white; padding: 5px 15px; font-weight: bold; 
-            border: 2px solid white; z-index: 10; display: none;
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-20deg);
+            background: none; color: #dc3545; padding: 5px 10px; font-weight: 900; font-size: 1.2rem;
+            border: 4px double #dc3545; z-index: 10; display: none; text-transform: uppercase;
+            letter-spacing: 2px; opacity: 0.8; pointer-events: none;
         }
         .card.out-of-stock .sold-out-badge { display: block; }
 
@@ -61,15 +65,20 @@
 
         .cash-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 10px 0; }
         .cash-btn { padding: 10px 2px; border: 1px solid #ddd; border-radius: 5px; background: white; font-weight: bold; cursor: pointer; }
+        .cash-btn:active { background: var(--primary); color: white; }
 
-        .pay-status { padding: 12px; border-radius: 8px; font-weight: bold; text-align: center; margin: 10px 0; }
+        .pay-status { padding: 12px; border-radius: 8px; font-weight: bold; text-align: center; margin: 10px 0; border: 1px solid #ddd; }
+
+        /* Form Labels (1c) */
+        .field-group { margin-bottom: 5px; }
+        .field-group label { display: block; font-size: 0.65em; font-weight: bold; color: #666; text-transform: uppercase; margin-left: 5px; }
 
         /* 4 & 5. FAB Sync */
         .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 3000; }
         .fab { width: 50px; height: 50px; border-radius: 50%; border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         
         #setup { position: fixed; inset: 0; background: var(--bg); z-index: 5000; padding: 40px; text-align: center; display: none; }
-        input { width: 100%; padding: 12px; margin: 5px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        input { width: 100%; padding: 12px; margin: 2px 0 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -101,7 +110,7 @@
                     <div class="sticky-search">
                         <input type="text" id="posSearch" placeholder="🔍 Search product..." oninput="renderPOS()">
                     </div>
-                    <table style="width:100%; border-collapse: collapse; background:white; border-radius:8px; overflow:hidden;">
+                    <table style="width:100%; border-collapse: collapse; background:white; border-radius:8px; overflow:hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
                         <thead style="background:#eee; font-size: 0.8em;">
                             <tr><th style="padding:10px; text-align:left;">Item</th><th style="text-align:right; padding:10px;">Price</th><th style="padding:10px;">Stock</th><th></th></tr>
                         </thead>
@@ -114,38 +123,56 @@
                     <div style="font-size:1.5em; font-weight:bold; text-align:right;" id="grandTotal">₱0.00</div>
                     
                     <div class="cash-presets">
-                        <button class="cash-btn" onclick="addCash(20)">20</button>
-                        <button class="cash-btn" onclick="addCash(50)">50</button>
-                        <button class="cash-btn" onclick="addCash(100)">100</button>
-                        <button class="cash-btn" onclick="addCash(1000)">1k</button>
+                        <button class="cash-btn" onclick="setCash(20)">₱20</button>
+                        <button class="cash-btn" onclick="setCash(50)">₱50</button>
+                        <button class="cash-btn" onclick="setCash(100)">₱100</button>
+                        <button class="cash-btn" onclick="setCash(1000)">₱1k</button>
                     </div>
                     <input type="number" id="amtPaid" placeholder="Amount Paid" oninput="calcPayment()">
                     <div id="payStatus" class="pay-status" style="background:#eee">Enter Amount</div>
-                    <button onclick="completeSale()" style="width:100%; padding:15px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:bold;">COMPLETE TRANSACTION</button>
+                    <button onclick="completeSale()" style="width:100%; padding:15px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">COMPLETE TRANSACTION</button>
                 </div>
             </div>
         </div>
 
         <div id="viewInv" class="view">
-            <div style="background:white; padding:15px; border-radius:12px; margin-bottom:20px; border: 1px solid #ddd;">
-                <h3 style="margin:0 0 10px 0">Product Form</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                    <input type="text" id="name" placeholder="Product Name" style="grid-column: span 2;">
-                    <input type="number" id="cost" placeholder="Total Cost" oninput="calcRec()">
-                    <input type="number" id="qty" placeholder="Quantity" oninput="calcRec()">
-                    <input type="number" id="markup" placeholder="Markup %" value="12" oninput="calcRec()">
-                    <input type="number" id="sell" placeholder="Rec. Price">
+            <div id="formSection" style="background:white; padding:15px; border-radius:12px; margin-bottom:20px; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <h3 id="formTitle" style="margin:0 0 10px 0; font-size: 1em;">Add New Product</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0 8px;">
+                    <div class="field-group" style="grid-column: span 2;">
+                        <label>Product Name</label>
+                        <input type="text" id="name" placeholder="e.g. Coca Cola 1.5L">
+                    </div>
+                    <div class="field-group">
+                        <label>Cost Price</label>
+                        <input type="number" id="cost" placeholder="0.00" oninput="calcRec()">
+                    </div>
+                    <div class="field-group">
+                        <label>Quantity</label>
+                        <input type="number" id="qty" placeholder="0" oninput="calcRec()">
+                    </div>
+                    <div class="field-group">
+                        <label>Markup %</label>
+                        <input type="number" id="markup" value="12" oninput="calcRec()">
+                    </div>
+                    <div class="field-group">
+                        <label>Rec. Sell Price</label>
+                        <input type="number" id="sell" placeholder="0.00">
+                    </div>
                 </div>
-                <button onclick="addItem()" id="mainBtn" style="width:100%; margin-top:10px; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold;">+ SAVE PRODUCT</button>
+                <div style="display:flex; gap:8px; margin-top:5px;">
+                    <button onclick="clearForm()" style="flex:1; padding:12px; background:#6c757d; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">CANCEL</button>
+                    <button onclick="addItem()" id="mainBtn" style="flex:2; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">SAVE PRODUCT</button>
+                </div>
             </div>
             <input type="text" id="searchBar" placeholder="🔍 Search inventory..." oninput="render()" style="margin-bottom:15px;">
             <div id="list"></div>
         </div>
 
         <div class="fab-container">
-            <span id="syncStatus" style="font-size: 10px; background: black; color: white; padding: 2px 5px; border-radius: 5px; text-align: center;">Offline</span>
-            <button class="fab" style="background:#6c757d" onclick="fetchData()">🔄</button>
-            <button class="fab" style="background:var(--success)" onclick="syncToCloud()">☁️</button>
+            <span id="syncStatus" style="font-size: 10px; background: black; color: white; padding: 2px 5px; border-radius: 5px; text-align: center;">Local Mode</span>
+            <button class="fab" style="background:#6c757d" title="Refresh/Fetch" onclick="fetchData()">🔄</button>
+            <button class="fab" style="background:var(--success)" title="Sync to Cloud" onclick="syncToCloud()">☁️</button>
         </div>
     </div>
 
@@ -175,13 +202,20 @@
             document.getElementById('sell').value = ((cost / qty) * (1 + (markup / 100))).toFixed(2);
         }
 
-        // 1. Inventory Rendering with 1d color logic
+        // 1e. Clear Form Logic
+        function clearForm() {
+            editingIndex = -1;
+            document.getElementById('formTitle').innerText = "Add New Product";
+            ['name','cost','qty','sell'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('markup').value = "12";
+        }
+
+        // 1d. Card Logic & Colors
         function render() {
             const listDiv = document.getElementById('list');
             const search = document.getElementById('searchBar').value.toLowerCase();
             let sumCost = 0; let sumSell = 0;
 
-            const filtered = inventory.filter(i => i.name.toLowerCase().includes(search));
             inventory.forEach(item => {
                 sumCost += parseFloat(item.cost) || 0;
                 sumSell += (parseFloat(item.sell) * item.qty) || 0;
@@ -190,9 +224,10 @@
             document.getElementById('totalCost').innerText = formatPHP(sumCost);
             document.getElementById('totalSell').innerText = formatPHP(sumSell);
 
-            listDiv.innerHTML = filtered.map((item, idx) => {
+            const filtered = inventory.filter(i => i.name.toLowerCase().includes(search));
+            listDiv.innerHTML = filtered.map((item) => {
                 const actualIdx = inventory.indexOf(item);
-                const unitCost = item.cost / (item.qtyInitial || item.qty);
+                const unitCost = item.cost / (item.qtyInitial || item.qty || 1);
                 const isLow = item.qty > 0 && item.qty <= 3;
                 const isOut = item.qty <= 0;
 
@@ -202,11 +237,11 @@
                     <div class="card-header">${item.name}</div>
                     <div class="card-body">
                         <span class="price-tag">${formatPHP(item.sell)}</span>
-                        <div style="font-size:0.7em; color:#666">Profit/unit: ${formatPHP(item.sell - unitCost)}</div>
-                        <div style="font-weight:bold; margin-top:5px;">Stock: ${item.qty}</div>
+                        <div style="font-size:0.7em; color:#666; margin-bottom:4px;">Profit/u: <span style="color:var(--success)">+${(item.sell - unitCost).toFixed(2)}</span></div>
+                        <div style="font-weight:bold; font-size: 0.9em;">Stock: ${item.qty}</div>
                     </div>
                     <div class="card-actions">
-                        <button class="act-btn" style="background:var(--info)" onclick="restockItem(${actualIdx})">Stock</button>
+                        <button class="act-btn" style="background:var(--info)" onclick="restockItem(${actualIdx})">Restock</button>
                         <button class="act-btn" style="background:var(--warning); color:black" onclick="editItem(${actualIdx})">Edit</button>
                         <button class="act-btn" style="background:var(--primary)" onclick="copyItem(${actualIdx})">Copy</button>
                         <button class="act-btn" style="background:var(--danger)" onclick="deleteItem(${actualIdx})">Del</button>
@@ -223,10 +258,10 @@
             body.innerHTML = inventory.filter(i => i.name.toLowerCase().includes(search)).map(item => {
                 const idx = inventory.indexOf(item);
                 return `
-                <tr style="border-bottom:1px solid #eee; ${item.qty <= 0 ? 'opacity:0.4' : ''}">
-                    <td style="padding:10px;"><b>${item.name}</b></td>
+                <tr style="border-bottom:1px solid #eee; ${item.qty <= 0 ? 'opacity:0.3' : ''}">
+                    <td style="padding:10px; font-size:0.9em;"><b>${item.name}</b></td>
                     <td style="text-align:right; padding:10px;">${formatPHP(item.sell)}</td>
-                    <td style="text-align:center; padding:10px;">${item.qty}</td>
+                    <td style="text-align:center; padding:10px; font-weight:bold;">${item.qty}</td>
                     <td style="text-align:right; padding:10px;">
                         <button onclick="addToCart(${idx})" ${item.qty <= 0 ? 'disabled' : ''} style="background:var(--primary); color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">+ Add</button>
                     </td>
@@ -239,7 +274,7 @@
             const inCart = cart.find(c => c.idx === idx);
             if (inCart) {
                 if (inCart.buyQty < item.qty) inCart.buyQty++;
-                else alert("Limit reached");
+                else alert("Out of Stock");
             } else { cart.push({...item, buyQty: 1, idx: idx}); }
             renderCart();
         }
@@ -258,9 +293,9 @@
             calcPayment();
         }
 
-        function addCash(amt) {
-            const inp = document.getElementById('amtPaid');
-            inp.value = (parseFloat(inp.value) || 0) + amt;
+        // 2e. SWITCH instead of Add
+        function setCash(amt) {
+            document.getElementById('amtPaid').value = amt;
             calcPayment();
         }
 
@@ -268,7 +303,7 @@
             const total = cart.reduce((sum, i) => sum + (i.sell * i.buyQty), 0);
             const paid = parseFloat(document.getElementById('amtPaid').value) || 0;
             const status = document.getElementById('payStatus');
-            if(total === 0) { status.innerText = "Cart Empty"; return; }
+            if(total === 0) { status.innerText = "Cart Empty"; status.style.background="#eee"; status.style.color="#333"; return; }
             if(paid < total) {
                 status.innerText = "SHORT: " + formatPHP(total - paid);
                 status.style.background = "#f8d7da"; status.style.color = "red";
@@ -279,15 +314,19 @@
         }
 
         function completeSale() {
+            const total = cart.reduce((sum, i) => sum + (i.sell * i.buyQty), 0);
+            const paid = parseFloat(document.getElementById('amtPaid').value) || 0;
             if(cart.length === 0) return;
+            if(paid < total) return alert("Payment is short!");
+
             cart.forEach(c => {
                 const item = inventory[c.idx];
-                const unitCost = item.cost / (item.qtyInitial || item.qty);
+                const unitCost = item.cost / (item.qtyInitial || item.qty || 1);
                 salesHistory.push({ revenue: c.sell * c.buyQty, profit: (c.sell - unitCost) * c.buyQty, date: new Date().toISOString() });
                 item.qty -= c.buyQty;
             });
             cart = []; document.getElementById('amtPaid').value = '';
-            render(); renderPOS(); renderCart(); alert("Transaction Complete!");
+            render(); renderPOS(); renderCart(); alert("Sale Completed!");
         }
 
         function updateDashboard() {
@@ -297,36 +336,39 @@
             document.getElementById('weeklyProfit').innerText = formatPHP(profit);
         }
 
-        // 5 & 7. Cloud Logic
+        // 5, 7, 8. Sync & Persistence
         async function fetchData() {
             if(!config) return;
             try {
                 const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
                     headers: { 'Authorization': `Bearer ${config.token}` }
                 });
-                const file = await res.json();
-                const content = JSON.parse(atob(file.content));
-                inventory = content.inventory || [];
-                salesHistory = content.salesHistory || [];
-                document.getElementById('syncStatus').innerText = "Last Sync: " + new Date().toLocaleTimeString();
-                render(); renderPOS();
-            } catch (e) { console.error(e); }
+                if(res.ok) {
+                    const file = await res.json();
+                    const content = JSON.parse(atob(file.content));
+                    inventory = content.inventory || [];
+                    salesHistory = content.salesHistory || [];
+                    document.getElementById('syncStatus').innerText = "Cloud Synced: " + new Date().toLocaleTimeString();
+                    render(); renderPOS();
+                }
+            } catch (e) { console.error("Fetch failed", e); }
         }
 
         async function syncToCloud() {
+            if(!config) return alert("Connect GitHub first");
             try {
                 const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
                     headers: { 'Authorization': `Bearer ${config.token}` }
                 });
                 const file = await res.json();
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify({ inventory, salesHistory }))));
-                await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+                const update = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${config.token}` },
-                    body: JSON.stringify({ message: "Update", content, sha: file.sha })
+                    body: JSON.stringify({ message: "Cloud Update", content, sha: file.sha })
                 });
-                alert("Cloud Synced!");
-            } catch (e) { alert("Sync Error"); }
+                if(update.ok) alert("Successfully synced to Cloud!");
+            } catch (e) { alert("Sync failed. Check connection."); }
         }
 
         function saveConfig() {
@@ -340,40 +382,45 @@
             const c = parseFloat(document.getElementById('cost').value) || 0;
             const q = parseFloat(document.getElementById('qty').value) || 0;
             const s = parseFloat(document.getElementById('sell').value) || 0;
-            if(!n) return alert("Name required");
+            if(!n) return alert("Product name is required");
             const obj = { name: n, cost: c, qty: q, qtyInitial: q, sell: s };
             if(editingIndex > -1) inventory[editingIndex] = obj; else inventory.push(obj);
-            editingIndex = -1;
-            ['name','cost','qty','sell'].forEach(id => document.getElementById(id).value = '');
-            render();
-        }
-
-        function copyItem(idx) {
-            const item = inventory[idx];
-            document.getElementById('name').value = item.name + " (Copy)";
-            document.getElementById('cost').value = item.cost;
-            document.getElementById('qty').value = item.qty;
-            document.getElementById('sell').value = item.sell;
-            editingIndex = -1; window.scrollTo(0,0);
+            clearForm(); render();
         }
 
         function editItem(idx) {
             editingIndex = idx;
             const item = inventory[idx];
+            document.getElementById('formTitle').innerText = "Editing: " + item.name;
             document.getElementById('name').value = item.name;
             document.getElementById('cost').value = item.cost;
             document.getElementById('qty').value = item.qty;
             document.getElementById('sell').value = item.sell;
-            window.scrollTo(0,0);
+            window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        function deleteItem(idx) { if(confirm("Delete?")) { inventory.splice(idx,1); render(); } }
+        function copyItem(idx) {
+            const item = inventory[idx];
+            document.getElementById('formTitle').innerText = "Copy of " + item.name;
+            document.getElementById('name').value = item.name + " (Copy)";
+            document.getElementById('cost').value = item.cost;
+            document.getElementById('qty').value = item.qty;
+            document.getElementById('sell').value = item.sell;
+            editingIndex = -1;
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        function deleteItem(idx) { if(confirm("Delete this product forever?")) { inventory.splice(idx,1); render(); } }
         function restockItem(idx) { 
-            const amt = prompt("Add quantity:"); 
-            if(amt) { inventory[idx].qty += parseInt(amt); render(); } 
+            const amt = prompt("How many units to add to current stock?"); 
+            if(amt && !isNaN(amt)) { 
+                inventory[idx].qty += parseInt(amt); 
+                inventory[idx].qtyInitial = (inventory[idx].qtyInitial || 0) + parseInt(amt);
+                render(); 
+            } 
         }
 
-        // 8. Service Worker Registration
+        // 8. Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.log("SW failed", err));
         }
