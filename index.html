@@ -14,7 +14,6 @@
         }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; }
         
-        /* 3. Dashboard (Sticky) */
         .sticky-container {
             position: sticky; top: 0; z-index: 2000;
             background: var(--dark); color: white;
@@ -22,7 +21,7 @@
         }
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 5px; }
         .stat-box { text-align: center; background: rgba(255,255,255,0.1); padding: 8px 2px; border-radius: 5px; }
-        .stat-box small { font-size: 0.6em; text-transform: uppercase; display: block; opacity: 0.8; }
+        .stat-box small { font-size: 0.55em; text-transform: uppercase; display: block; opacity: 0.8; letter-spacing: 0.5px; }
         .stat-box strong { font-size: 0.85em; color: var(--warning); }
 
         .tabs { display: flex; gap: 5px; padding: 10px 10px 0; }
@@ -32,15 +31,13 @@
         .view { display: none; padding: 15px; }
         .view.active { display: block; }
 
-        /* 1a & 1d. Inventory Cards, Colors & Stamp */
         #list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
         .card { background: white; border-radius: 12px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; position: relative; transition: 0.2s; }
         
-        /* 1d. Color Logic */
+        /* 1d. Low stock logic */
         .card.low-stock { background: #fff3cd !important; border-color: #ffeeba; }
         .card.out-of-stock { background: #f8d7da !important; border-color: #f5c6cb; }
         
-        /* THE SOLD OUT STAMP */
         .sold-out-badge { 
             position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-20deg);
             background: none; color: #dc3545; padding: 5px 10px; font-weight: 900; font-size: 1.2rem;
@@ -56,26 +53,22 @@
         .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px; background: rgba(0,0,0,0.05); }
         .act-btn { padding: 8px 2px; border: none; border-radius: 4px; font-size: 0.7em; font-weight: bold; color: white; cursor: pointer; }
 
-        /* 2. POS Layout */
         .pos-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; }
         @media (max-width: 768px) { .pos-grid { grid-template-columns: 1fr; } }
         
-        /* 2a. Sticky Search Bar */
-        .sticky-search { position: sticky; top: 110px; z-index: 1000; background: var(--bg); padding-bottom: 10px; }
+        .sticky-search { position: sticky; top: 115px; z-index: 1000; background: var(--bg); padding-bottom: 10px; }
 
-        .cash-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 10px 0; }
-        .cash-btn { padding: 10px 2px; border: 1px solid #ddd; border-radius: 5px; background: white; font-weight: bold; cursor: pointer; }
-        .cash-btn:active { background: var(--primary); color: white; }
+        .cash-presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 10px 0; }
+        .cash-btn { padding: 10px 2px; border: 1px solid #ddd; border-radius: 5px; background: white; font-size: 0.75em; font-weight: bold; cursor: pointer; }
 
         .pay-status { padding: 12px; border-radius: 8px; font-weight: bold; text-align: center; margin: 10px 0; border: 1px solid #ddd; }
 
-        /* Form Labels (1c) */
         .field-group { margin-bottom: 5px; }
         .field-group label { display: block; font-size: 0.65em; font-weight: bold; color: #666; text-transform: uppercase; margin-left: 5px; }
+        .note { font-size: 0.6em; color: #888; margin-top: -5px; margin-bottom: 5px; display: block; }
 
-        /* 4 & 5. FAB Sync */
         .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 3000; }
-        .fab { width: 50px; height: 50px; border-radius: 50%; border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .fab { width: 50px; height: 50px; border-radius: 50%; border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
         
         #setup { position: fixed; inset: 0; background: var(--bg); z-index: 5000; padding: 40px; text-align: center; display: none; }
         input { width: 100%; padding: 12px; margin: 2px 0 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
@@ -94,13 +87,13 @@
         <div class="sticky-container">
             <div class="stats-grid">
                 <div class="stat-box"><small>Capital</small><strong id="totalCost">₱0</strong></div>
-                <div class="stat-box"><small>Inv Val</small><strong id="totalSell">₱0</strong></div>
+                <div class="stat-box"><small>Inventory Value</small><strong id="totalSell">₱0</strong></div>
                 <div class="stat-box"><small>Sales</small><strong id="weeklySales" style="color:#28a745">₱0</strong></div>
                 <div class="stat-box"><small>Profit</small><strong id="weeklyProfit" style="color:#17a2b8">₱0</strong></div>
             </div>
             <div class="tabs">
-                <button class="tab-btn active" id="btnPos" onclick="switchTab('pos')">🛒 POS</button>
-                <button class="tab-btn" id="btnInv" onclick="switchTab('inventory')">📦 INV</button>
+                <button class="tab-btn active" id="btnPos" onclick="switchTab('pos')">🛒 Checkout</button>
+                <button class="tab-btn" id="btnInv" onclick="switchTab('inventory')">📦 Inventory</button>
             </div>
         </div>
 
@@ -112,31 +105,32 @@
                     </div>
                     <table style="width:100%; border-collapse: collapse; background:white; border-radius:8px; overflow:hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
                         <thead style="background:#eee; font-size: 0.8em;">
-                            <tr><th style="padding:10px; text-align:left;">Item</th><th style="text-align:right; padding:10px;">Price</th><th style="padding:10px;">Stock</th><th></th></tr>
+                            <tr><th style="padding:10px; text-align:left;">Item Name</th><th style="text-align:right; padding:10px;">Price</th><th style="padding:10px;">Stock</th><th></th></tr>
                         </thead>
                         <tbody id="posBody"></tbody>
                     </table>
                 </div>
-                <div style="background:white; padding:15px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); height:fit-content; position: sticky; top: 120px;">
+                <div style="background:white; padding:15px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); height:fit-content; position: sticky; top: 125px;">
                     <h3 style="margin:0">Cart</h3>
                     <div id="cartList" style="margin:10px 0; border-bottom:1px solid #eee; max-height: 200px; overflow-y: auto;"></div>
                     <div style="font-size:1.5em; font-weight:bold; text-align:right;" id="grandTotal">₱0.00</div>
                     
                     <div class="cash-presets">
-                        <button class="cash-btn" onclick="setCash(20)">₱20</button>
-                        <button class="cash-btn" onclick="setCash(50)">₱50</button>
-                        <button class="cash-btn" onclick="setCash(100)">₱100</button>
+                        <button class="cash-btn" onclick="setCash(20)">₱20.00</button>
+                        <button class="cash-btn" onclick="setCash(50)">₱50.00</button>
+                        <button class="cash-btn" onclick="setCash(100)">₱100.00</button>
+                        <button class="cash-btn" onclick="setCash(500)">₱500.00</button>
                         <button class="cash-btn" onclick="setCash(1000)">₱1k</button>
                     </div>
                     <input type="number" id="amtPaid" placeholder="Amount Paid" oninput="calcPayment()">
                     <div id="payStatus" class="pay-status" style="background:#eee">Enter Amount</div>
-                    <button onclick="completeSale()" style="width:100%; padding:15px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">COMPLETE TRANSACTION</button>
+                    <button onclick="completeSale()" style="width:100%; padding:15px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Confirm</button>
                 </div>
             </div>
         </div>
 
         <div id="viewInv" class="view">
-            <div id="formSection" style="background:white; padding:15px; border-radius:12px; margin-bottom:20px; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div id="formSection" style="background:white; padding:15px; border-radius:12px; margin-bottom:20px; border: 1px solid #ddd;">
                 <h3 id="formTitle" style="margin:0 0 10px 0; font-size: 1em;">Add New Product</h3>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0 8px;">
                     <div class="field-group" style="grid-column: span 2;">
@@ -144,11 +138,11 @@
                         <input type="text" id="name" placeholder="e.g. Coca Cola 1.5L">
                     </div>
                     <div class="field-group">
-                        <label>Cost Price</label>
+                        <label>Cost</label>
                         <input type="number" id="cost" placeholder="0.00" oninput="calcRec()">
                     </div>
                     <div class="field-group">
-                        <label>Quantity</label>
+                        <label>Qty</label>
                         <input type="number" id="qty" placeholder="0" oninput="calcRec()">
                     </div>
                     <div class="field-group">
@@ -156,13 +150,15 @@
                         <input type="number" id="markup" value="12" oninput="calcRec()">
                     </div>
                     <div class="field-group">
-                        <label>Rec. Sell Price</label>
+                        <label>Selling Price</label>
                         <input type="number" id="sell" placeholder="0.00">
                     </div>
                 </div>
+                <small class="note">Note: Recommended price is auto-calculated based on markup.</small>
+                
                 <div style="display:flex; gap:8px; margin-top:5px;">
-                    <button onclick="clearForm()" style="flex:1; padding:12px; background:#6c757d; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">CANCEL</button>
                     <button onclick="addItem()" id="mainBtn" style="flex:2; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">SAVE PRODUCT</button>
+                    <button onclick="clearForm()" style="flex:1; padding:12px; background:#6c757d; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">CANCEL</button>
                 </div>
             </div>
             <input type="text" id="searchBar" placeholder="🔍 Search inventory..." oninput="render()" style="margin-bottom:15px;">
@@ -202,7 +198,6 @@
             document.getElementById('sell').value = ((cost / qty) * (1 + (markup / 100))).toFixed(2);
         }
 
-        // 1e. Clear Form Logic
         function clearForm() {
             editingIndex = -1;
             document.getElementById('formTitle').innerText = "Add New Product";
@@ -210,7 +205,6 @@
             document.getElementById('markup').value = "12";
         }
 
-        // 1d. Card Logic & Colors
         function render() {
             const listDiv = document.getElementById('list');
             const search = document.getElementById('searchBar').value.toLowerCase();
@@ -228,6 +222,7 @@
             listDiv.innerHTML = filtered.map((item) => {
                 const actualIdx = inventory.indexOf(item);
                 const unitCost = item.cost / (item.qtyInitial || item.qty || 1);
+                // 1d. Logic threshold
                 const isLow = item.qty > 0 && item.qty <= 3;
                 const isOut = item.qty <= 0;
 
@@ -237,21 +232,20 @@
                     <div class="card-header">${item.name}</div>
                     <div class="card-body">
                         <span class="price-tag">${formatPHP(item.sell)}</span>
-                        <div style="font-size:0.7em; color:#666; margin-bottom:4px;">Profit/u: <span style="color:var(--success)">+${(item.sell - unitCost).toFixed(2)}</span></div>
+                        <div style="font-size:0.7em; color:#666; margin-bottom:4px;">Profit: <span style="color:var(--success)">+${(item.sell - unitCost).toFixed(2)}</span></div>
                         <div style="font-weight:bold; font-size: 0.9em;">Stock: ${item.qty}</div>
                     </div>
                     <div class="card-actions">
                         <button class="act-btn" style="background:var(--info)" onclick="restockItem(${actualIdx})">Restock</button>
                         <button class="act-btn" style="background:var(--warning); color:black" onclick="editItem(${actualIdx})">Edit</button>
                         <button class="act-btn" style="background:var(--primary)" onclick="copyItem(${actualIdx})">Copy</button>
-                        <button class="act-btn" style="background:var(--danger)" onclick="deleteItem(${actualIdx})">Del</button>
+                        <button class="act-btn" style="background:var(--danger)" onclick="deleteItem(${actualIdx})">Delete</button>
                     </div>
                 </div>`;
             }).join('');
             updateDashboard();
         }
 
-        // 2. POS Logic
         function renderPOS() {
             const search = document.getElementById('posSearch').value.toLowerCase();
             const body = document.getElementById('posBody');
@@ -293,7 +287,6 @@
             calcPayment();
         }
 
-        // 2e. SWITCH instead of Add
         function setCash(amt) {
             document.getElementById('amtPaid').value = amt;
             calcPayment();
@@ -336,7 +329,6 @@
             document.getElementById('weeklyProfit').innerText = formatPHP(profit);
         }
 
-        // 5, 7, 8. Sync & Persistence
         async function fetchData() {
             if(!config) return;
             try {
@@ -348,6 +340,7 @@
                     const content = JSON.parse(atob(file.content));
                     inventory = content.inventory || [];
                     salesHistory = content.salesHistory || [];
+                    // 6. Cloud Last Synced
                     document.getElementById('syncStatus').innerText = "Cloud Synced: " + new Date().toLocaleTimeString();
                     render(); renderPOS();
                 }
@@ -420,7 +413,6 @@
             } 
         }
 
-        // 8. Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.log("SW failed", err));
         }
