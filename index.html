@@ -11,7 +11,7 @@
         }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; }
         
-        /* 3. DASHBOARD (Sticky) */
+        /* Dashboard & Tabs */
         .sticky-container {
             position: sticky; top: 0; z-index: 2000;
             background: var(--dark); color: white;
@@ -29,9 +29,9 @@
         .view { display: none; padding: 15px; }
         .view.active { display: block; }
 
-        /* 1. INVENTORY CARD BUTTONS & STYLES */
+        /* Inventory Cards */
         #list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-        .card { background: white; border-radius: 12px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; }
+        .card { background: white; border-radius: 12px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .card-header { padding: 10px; font-weight: bold; background: #fafafa; text-align: center; border-bottom: 1px solid #eee; }
         .card-body { padding: 12px; flex-grow: 1; text-align: center; }
         .price-tag { font-size: 1.2em; font-weight: 800; color: var(--success); display: block; }
@@ -44,23 +44,37 @@
         .btn-copy { background: var(--primary); }
         .btn-del { background: var(--danger); }
 
-        /* 1d. LOW STOCK/SOLD OUT threshold colors */
         .stock-low { color: #856404; background: #fff3cd; padding: 0 4px; border-radius: 3px; font-weight: bold; }
         .stock-out { color: #721c24; background: #f8d7da; padding: 0 4px; border-radius: 3px; font-weight: bold; }
 
-        /* 2. POS STYLES */
+        /* POS Layout */
         .pos-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; }
-        @media (max-width: 600px) { .pos-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .pos-grid { grid-template-columns: 1fr; } }
         
-        /* 2e. QUICK CASH BUTTONS */
         .cash-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 10px 0; }
         .cash-btn { padding: 10px 2px; border: 1px solid #ddd; border-radius: 5px; background: white; font-weight: bold; cursor: pointer; }
-        .cash-btn:active { background: #eee; }
 
-        .pay-status { padding: 12px; border-radius: 8px; font-weight: bold; text-align: center; margin: 10px 0; font-size: 1.1em; }
+        .pay-status { padding: 12px; border-radius: 8px; font-weight: bold; text-align: center; margin: 10px 0; }
+
+        /* FAB (Floating Buttons) */
+        .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 3000; }
+        .fab { width: 50px; height: 50px; border-radius: 50%; border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .sync-label { font-size: 10px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 10px; text-align: center; }
+
+        /* Setup Overlay */
+        #setup { position: fixed; inset: 0; background: var(--bg); z-index: 5000; padding: 40px; text-align: center; display: none; }
+        input { width: 100%; padding: 12px; margin: 5px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
     </style>
 </head>
 <body>
+
+    <div id="setup">
+        <h2>Connect GitHub</h2>
+        <p>Enter your details to sync <b>data.json</b></p>
+        <input type="password" id="ghToken" placeholder="GitHub Personal Access Token">
+        <input type="text" id="ghRepo" placeholder="username/repository">
+        <button onclick="saveConfig()" style="width:100%; padding:15px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold; margin-top:10px;">Connect Shop</button>
+    </div>
 
     <div id="app">
         <div class="sticky-container">
@@ -71,53 +85,57 @@
                 <div class="stat-box"><small>Profit</small><strong id="weeklyProfit" style="color:#17a2b8">₱0</strong></div>
             </div>
             <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('pos')">🛒 POS</button>
-                <button class="tab-btn" onclick="switchTab('inventory')">📦 INV</button>
+                <button class="tab-btn active" id="btnPos" onclick="switchTab('pos')">🛒 POS</button>
+                <button class="tab-btn" id="btnInv" onclick="switchTab('inventory')">📦 INV</button>
             </div>
         </div>
 
         <div id="viewPos" class="view active">
             <div class="pos-grid">
                 <div>
-                    <input type="text" id="posSearch" placeholder="🔍 Search product..." oninput="renderPOS()" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd; position:sticky; top:110px; z-index:10;">
-                    <table style="width:100%; border-collapse: collapse; background:white; border-radius:8px; overflow:hidden;">
+                    <input type="text" id="posSearch" placeholder="🔍 Search product..." oninput="renderPOS()">
+                    <table style="width:100%; border-collapse: collapse; background:white; border-radius:8px;">
                         <tbody id="posBody"></tbody>
                     </table>
                 </div>
-                <div style="background:white; padding:15px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); height:fit-content; position:sticky; top:110px;">
-                    <h3>Cart</h3>
-                    <div id="cartList" style="min-height:50px; border-bottom:1px solid #eee;"></div>
-                    <div style="font-size:1.5em; font-weight:bold; text-align:right; margin:10px 0;" id="grandTotal">₱0.00</div>
+                <div style="background:white; padding:15px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); height:fit-content;">
+                    <h3 style="margin:0">Cart</h3>
+                    <div id="cartList" style="margin:10px 0; border-bottom:1px solid #eee;"></div>
+                    <div style="font-size:1.5em; font-weight:bold; text-align:right;" id="grandTotal">₱0.00</div>
                     
-                    <small>Payment Received:</small>
                     <div class="cash-presets">
-                        <button class="cash-btn" onclick="setCash(20)">₱20</button>
-                        <button class="cash-btn" onclick="setCash(50)">₱50</button>
-                        <button class="cash-btn" onclick="setCash(100)">₱100</button>
-                        <button class="cash-btn" onclick="setCash(1000)">₱1k</button>
+                        <button class="cash-btn" onclick="addCash(20)">20</button>
+                        <button class="cash-btn" onclick="addCash(50)">50</button>
+                        <button class="cash-btn" onclick="addCash(100)">100</button>
+                        <button class="cash-btn" onclick="addCash(1000)">1k</button>
                     </div>
-                    <input type="number" id="amtPaid" placeholder="Enter amount" oninput="calcPayment()" style="width:100%; padding:12px; font-size:1.2em; border:1px solid #ddd; border-radius:8px;">
-                    
+                    <input type="number" id="amtPaid" placeholder="Amount Paid" oninput="calcPayment()">
                     <div id="payStatus" class="pay-status" style="background:#eee">Enter Amount</div>
-                    <button onclick="completeSale()" style="width:100%; padding:15px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">COMPLETE TRANSACTION</button>
+                    <button onclick="completeSale()" style="width:100%; padding:15px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">COMPLETE</button>
                 </div>
             </div>
         </div>
 
         <div id="viewInv" class="view">
             <div style="background:white; padding:15px; border-radius:12px; margin-bottom:20px;">
-                <h3 style="margin-top:0">Product Form</h3>
+                <h3 style="margin:0 0 10px 0">Product Form</h3>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                    <input type="text" id="name" placeholder="Product Name" style="grid-column: span 2; padding:10px;">
-                    <input type="number" id="cost" placeholder="Total Cost" oninput="calcRec()" style="padding:10px;">
-                    <input type="number" id="qty" placeholder="Quantity" oninput="calcRec()" style="padding:10px;">
-                    <input type="number" id="markup" placeholder="Markup %" value="12" oninput="calcRec()" style="padding:10px;">
-                    <input type="number" id="sell" placeholder="Recommended Price" style="padding:10px; border:2px solid var(--success);">
+                    <input type="text" id="name" placeholder="Name" style="grid-column: span 2;">
+                    <input type="number" id="cost" placeholder="Total Cost" oninput="calcRec()">
+                    <input type="number" id="qty" placeholder="Qty" oninput="calcRec()">
+                    <input type="number" id="markup" placeholder="Markup %" value="12" oninput="calcRec()">
+                    <input type="number" id="sell" placeholder="Sell Price">
                 </div>
-                <button onclick="addItem()" id="mainBtn" style="width:100%; margin-top:10px; padding:12px; background:var(--primary); color:white; border:none; border-radius:5px; font-weight:bold;">+ SAVE PRODUCT</button>
+                <button onclick="addItem()" id="mainBtn" style="width:100%; margin-top:10px; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px;">+ SAVE PRODUCT</button>
             </div>
-            <input type="text" id="searchBar" placeholder="🔍 Search inventory..." oninput="render()" style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid #ddd;">
+            <input type="text" id="searchBar" placeholder="🔍 Search inventory..." oninput="render()" style="margin-bottom:15px;">
             <div id="list"></div>
+        </div>
+
+        <div class="fab-container">
+            <span id="syncStatus" class="sync-label">Offline</span>
+            <button class="fab" style="background:#6c757d" onclick="fetchData()">🔄</button>
+            <button class="fab" style="background:var(--success)" onclick="syncToCloud()">☁️</button>
         </div>
     </div>
 
@@ -126,48 +144,56 @@
         let salesHistory = [];
         let cart = [];
         let editingIndex = -1;
+        let config = JSON.parse(localStorage.getItem('inv_config'));
+
+        // Initialize App
+        if (!config) {
+            document.getElementById('setup').style.display = 'block';
+        } else {
+            fetchData();
+        }
 
         function formatPHP(num) {
-            return '₱' + parseFloat(num).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            return '₱' + parseFloat(num).toLocaleString(undefined, {minimumFractionDigits: 2});
         }
 
         function switchTab(tab) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById(tab === 'pos' ? 'viewPos' : 'viewInv').classList.add('active');
+            if(tab === 'pos') {
+                document.getElementById('viewPos').classList.add('active');
+                document.getElementById('btnPos').classList.add('active');
+            } else {
+                document.getElementById('viewInv').classList.add('active');
+                document.getElementById('btnInv').classList.add('active');
+            }
             render(); renderPOS();
         }
 
-        // 1c. Recommended Price Calculation
         function calcRec() {
             const cost = parseFloat(document.getElementById('cost').value) || 0;
             const qty = parseFloat(document.getElementById('qty').value) || 1;
             const markup = parseFloat(document.getElementById('markup').value) || 0;
-            const rec = (cost / qty) * (1 + (markup / 100));
-            document.getElementById('sell').value = rec.toFixed(2);
+            document.getElementById('sell').value = ((cost / qty) * (1 + (markup / 100))).toFixed(2);
         }
 
         function render() {
             const listDiv = document.getElementById('list');
             const search = document.getElementById('searchBar').value.toLowerCase();
-            
-            // 3. Update Dashboard Stats
             let sumCost = 0; let sumSell = 0;
+
+            const filtered = inventory.filter(i => i.name.toLowerCase().includes(search));
             inventory.forEach(item => {
                 sumCost += parseFloat(item.cost) || 0;
                 sumSell += (parseFloat(item.sell) * item.qty) || 0;
             });
+
             document.getElementById('totalCost').innerText = formatPHP(sumCost);
             document.getElementById('totalSell').innerText = formatPHP(sumSell);
 
-            const filtered = inventory.filter(i => i.name.toLowerCase().includes(search));
-            listDiv.innerHTML = filtered.map((item) => {
+            listDiv.innerHTML = filtered.map((item, idx) => {
                 const actualIdx = inventory.indexOf(item);
-                const unitCost = (item.cost / (item.qtyInitial || item.qty)) || 0;
-                const profit = item.sell - unitCost;
-                
-                // 1d. Stock Visuals
+                const unitCost = item.cost / (item.qtyInitial || item.qty);
                 const stockClass = item.qty <= 0 ? 'stock-out' : (item.qty <= 3 ? 'stock-low' : '');
 
                 return `
@@ -175,8 +201,8 @@
                     <div class="card-header">${item.name}</div>
                     <div class="card-body">
                         <span class="price-tag">${formatPHP(item.sell)}</span>
-                        <div class="detail-line">Profit/Unit: <b style="color:var(--success)">+${profit.toFixed(2)}</b></div>
-                        <div class="detail-line">Stock: <b class="${stockClass}">${item.qty <= 0 ? 'SOLD OUT' : item.qty}</b></div>
+                        <div class="detail-line">Profit: <b style="color:var(--success)">+${(item.sell - unitCost).toFixed(2)}</b></div>
+                        <div class="detail-line">Stock: <b class="${stockClass}">${item.qty}</b></div>
                     </div>
                     <div class="card-actions">
                         <button class="act-btn btn-restock" onclick="restockItem(${actualIdx})">Stock</button>
@@ -186,6 +212,7 @@
                     </div>
                 </div>`;
             }).join('');
+            updateDashboard();
         }
 
         function renderPOS() {
@@ -194,11 +221,9 @@
             body.innerHTML = inventory.filter(i => i.name.toLowerCase().includes(search)).map(item => {
                 const idx = inventory.indexOf(item);
                 return `
-                <tr style="border-bottom:1px solid #eee; ${item.qty <= 0 ? 'opacity:0.5' : ''}">
-                    <td style="padding:12px;"><b>${item.name}</b><br><small>${formatPHP(item.sell)} | Stock: ${item.qty}</small></td>
-                    <td style="text-align:right; padding:12px;">
-                        <button onclick="addToCart(${idx})" ${item.qty <= 0 ? 'disabled' : ''} style="padding:8px; background:var(--primary); color:white; border:none; border-radius:5px; cursor:pointer;">+ Add</button>
-                    </td>
+                <tr style="border-bottom:1px solid #eee; ${item.qty <= 0 ? 'opacity:0.4' : ''}">
+                    <td style="padding:10px;"><b>${item.name}</b><br><small>${formatPHP(item.sell)}</small></td>
+                    <td style="text-align:right;"><button onclick="addToCart(${idx})" ${item.qty <= 0 ? 'disabled' : ''} style="background:var(--primary); color:white; border:none; padding:8px 12px; border-radius:5px;">+ Add</button></td>
                 </tr>`;
             }).join('');
         }
@@ -208,9 +233,9 @@
             const inCart = cart.find(c => c.idx === idx);
             if (inCart) {
                 if (inCart.buyQty < item.qty) inCart.buyQty++;
-                else alert("Out of stock!");
+                else alert("Out of Stock");
             } else {
-                cart.push({ ...item, buyQty: 1, idx: idx });
+                cart.push({...item, buyQty: 1, idx: idx});
             }
             renderCart();
         }
@@ -220,18 +245,18 @@
             let total = 0;
             list.innerHTML = cart.map((item, i) => {
                 total += (item.sell * item.buyQty);
-                return `<div style="display:flex; justify-content:space-between; padding:5px 0;">
+                return `<div style="display:flex; justify-content:space-between; font-size:0.9em; padding:3px 0;">
                     <span>${item.name} x${item.buyQty}</span>
-                    <span>${formatPHP(item.sell * item.buyQty)} <button onclick="cart.splice(${i},1);renderCart()" style="color:red; border:none; background:none; cursor:pointer">✕</button></span>
+                    <span>${formatPHP(item.sell * item.buyQty)} <button onclick="cart.splice(${i},1);renderCart()" style="color:red; border:none; background:none;">✕</button></span>
                 </div>`;
             }).join('');
             document.getElementById('grandTotal').innerText = formatPHP(total);
             calcPayment();
         }
 
-        // 2e. Set Cash from presets
-        function setCash(amt) {
-            document.getElementById('amtPaid').value = amt;
+        function addCash(amt) {
+            const inp = document.getElementById('amtPaid');
+            inp.value = (parseFloat(inp.value) || 0) + amt;
             calcPayment();
         }
 
@@ -239,49 +264,74 @@
             const total = cart.reduce((sum, i) => sum + (i.sell * i.buyQty), 0);
             const paid = parseFloat(document.getElementById('amtPaid').value) || 0;
             const status = document.getElementById('payStatus');
-            
-            if (total === 0) {
-                status.innerText = "Cart Empty";
-                status.style.color = "gray";
-                return;
-            }
-
-            // 2f. Change / Short calculation
-            if (paid < total) {
+            if(total === 0) { status.innerText = "Cart Empty"; status.style.background = "#eee"; return; }
+            if(paid < total) {
                 status.innerText = "SHORT: " + formatPHP(total - paid);
-                status.style.color = "red";
+                status.style.background = "#f8d7da"; status.style.color = "red";
             } else {
                 status.innerText = "CHANGE: " + formatPHP(paid - total);
-                status.style.color = "green";
+                status.style.background = "#d4edda"; status.style.color = "green";
             }
         }
 
         function completeSale() {
-            if (cart.length === 0) return;
-            const total = cart.reduce((sum, i) => sum + (i.sell * i.buyQty), 0);
-            const paid = parseFloat(document.getElementById('amtPaid').value) || 0;
-            if(paid < total) return alert("Insufficient Payment");
-
+            if(cart.length === 0) return;
             cart.forEach(c => {
                 const item = inventory[c.idx];
                 const unitCost = item.cost / (item.qtyInitial || item.qty);
-                salesHistory.push({
-                    revenue: c.sell * c.buyQty,
-                    profit: (c.sell - unitCost) * c.buyQty
-                });
+                salesHistory.push({ revenue: c.sell * c.buyQty, profit: (c.sell - unitCost) * c.buyQty, date: new Date().toISOString() });
                 item.qty -= c.buyQty;
             });
-            cart = [];
-            document.getElementById('amtPaid').value = '';
-            alert("Transaction Complete!");
-            render(); renderPOS(); renderCart(); updateDashboard();
+            cart = []; document.getElementById('amtPaid').value = '';
+            render(); renderPOS(); renderCart(); alert("Success!");
         }
 
         function updateDashboard() {
-            const rev = salesHistory.reduce((sum, s) => sum + s.revenue, 0);
-            const prof = salesHistory.reduce((sum, s) => sum + s.profit, 0);
-            document.getElementById('weeklySales').innerText = formatPHP(rev);
-            document.getElementById('weeklyProfit').innerText = formatPHP(prof);
+            const sales = salesHistory.reduce((sum, s) => sum + s.revenue, 0);
+            const profit = salesHistory.reduce((sum, s) => sum + s.profit, 0);
+            document.getElementById('weeklySales').innerText = formatPHP(sales);
+            document.getElementById('weeklyProfit').innerText = formatPHP(profit);
+        }
+
+        // CLOUD FUNCTIONS
+        async function fetchData() {
+            if(!config) return;
+            try {
+                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${config.token}` }
+                });
+                const file = await res.json();
+                const content = JSON.parse(atob(file.content));
+                inventory = content.inventory || [];
+                salesHistory = content.salesHistory || [];
+                document.getElementById('syncStatus').innerText = "Last: " + new Date().toLocaleTimeString();
+                render(); renderPOS();
+            } catch (e) { alert("Failed to fetch from GitHub"); }
+        }
+
+        async function syncToCloud() {
+            try {
+                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+                    headers: { 'Authorization': `Bearer ${config.token}` }
+                });
+                const file = await res.json();
+                const content = btoa(JSON.stringify({ inventory, salesHistory }));
+                await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${config.token}` },
+                    body: JSON.stringify({ message: "Update Data", content, sha: file.sha })
+                });
+                alert("Cloud Synced!");
+            } catch (e) { alert("Sync Failed"); }
+        }
+
+        function saveConfig() {
+            const token = document.getElementById('ghToken').value;
+            const repo = document.getElementById('ghRepo').value;
+            if(token && repo) {
+                localStorage.setItem('inv_config', JSON.stringify({token, repo}));
+                location.reload();
+            }
         }
 
         function addItem() {
@@ -289,15 +339,12 @@
             const c = parseFloat(document.getElementById('cost').value);
             const q = parseFloat(document.getElementById('qty').value);
             const s = parseFloat(document.getElementById('sell').value);
-            if (!n || !s) return alert("Fill Name and Price");
-
+            if(!n || !s) return;
             const obj = { name: n, cost: c, qty: q, qtyInitial: q, sell: s };
-            if (editingIndex > -1) inventory[editingIndex] = obj;
-            else inventory.push(obj);
-
+            if(editingIndex > -1) inventory[editingIndex] = obj; else inventory.push(obj);
             editingIndex = -1;
             ['name','cost','qty','sell'].forEach(id => document.getElementById(id).value = '');
-            render(); renderPOS();
+            render();
         }
 
         function copyItem(idx) {
@@ -307,7 +354,7 @@
             document.getElementById('qty').value = item.qty;
             document.getElementById('sell').value = item.sell;
             editingIndex = -1;
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            window.scrollTo(0,0);
         }
 
         function editItem(idx) {
@@ -317,19 +364,13 @@
             document.getElementById('cost').value = item.cost;
             document.getElementById('qty').value = item.qty;
             document.getElementById('sell').value = item.sell;
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            window.scrollTo(0,0);
         }
 
-        function deleteItem(idx) { if(confirm("Delete this product?")) { inventory.splice(idx,1); render(); } }
-        
+        function deleteItem(idx) { if(confirm("Delete?")) { inventory.splice(idx,1); render(); } }
         function restockItem(idx) { 
-            const amt = prompt("Enter quantity to add to current stock:"); 
-            if(amt) { 
-                inventory[idx].qty += parseInt(amt); 
-                // Adjust initial qty to keep profit calc accurate if needed
-                inventory[idx].qtyInitial = (inventory[idx].qtyInitial || 0) + parseInt(amt);
-                render(); 
-            } 
+            const amt = prompt("How many to add?"); 
+            if(amt) { inventory[idx].qty += parseInt(amt); render(); } 
         }
     </script>
 </body>
