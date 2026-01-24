@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager Pro - Command Mode</title>
+    <title>Manager Pro</title>
+    <link rel="manifest" href="manifest.json">
     <style>
         :root {
             --primary: #007bff; --success: #28a745; --info: #17a2b8;
@@ -386,6 +387,16 @@
             const r = document.getElementById('ghRepo').value; 
             if(t && r) { localStorage.setItem('inv_config', JSON.stringify({token:t, repo:r})); location.reload(); }
         }
+        
+        // --- Add this at the bottom of your script section ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker Registered'))
+                    .catch(err => console.log('Service Worker Failed', err));
+            });
+        }
+        
     </script>
 </body>
 </html>
