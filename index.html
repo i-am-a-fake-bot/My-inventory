@@ -3,119 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager Pro - Command Mode</title>
+    <title>Manager Pro - POS System</title>
     <style>
         :root {
-            --primary: #007bff;
-            --success: #28a745;
-            --info: #17a2b8;
-            --warning: #ffc107;
-            --danger: #dc3545;
-            --dark: #212529;
-            --bg: #f4f7f6;
+            --primary: #007bff; --success: #28a745; --info: #17a2b8;
+            --warning: #ffc107; --danger: #dc3545; --dark: #212529; --bg: #f4f7f6;
         }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: #333; margin: 0; padding-bottom: 100px; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: #333; margin: 0; padding-bottom: 20px; }
         
-        .sticky-container {
-            position: sticky; top: 0; z-index: 1000;
-            background: var(--dark); color: white;
-            padding: 15px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            display: flex; justify-content: space-around;
-        }
-        .stat-box { text-align: center; }
-        .stat-box small { opacity: 0.7; font-size: 0.7em; text-transform: uppercase; }
-        .stat-box strong { display: block; font-size: 1.1em; color: #ffc107; }
+        /* Tab Navigation */
+        .tabs { display: flex; background: var(--dark); position: sticky; top: 0; z-index: 2000; }
+        .tab-btn { flex: 1; padding: 15px; border: none; background: none; color: white; font-weight: bold; cursor: pointer; opacity: 0.6; }
+        .tab-btn.active { opacity: 1; border-bottom: 4px solid var(--primary); }
 
-        .input-section { background: white; margin: 15px; padding: 20px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .full-width { grid-column: span 2; }
-        input { padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; width: 100%; box-sizing: border-box; }
+        .view { display: none; padding: 15px; }
+        .view.active { display: block; }
+
+        /* POS Table Styling */
+        .pos-container { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        @media (min-width: 768px) { .pos-container { grid-template-columns: 1.5fr 1fr; } }
+
+        .search-box { position: sticky; top: 54px; z-index: 1000; background: var(--bg); padding: 10px 0; }
+        .pos-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; font-size: 0.9em; }
+        .pos-table th, .pos-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        .pos-table th { background: #eee; }
+
+        /* Cart Styling */
+        .cart-section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); height: fit-content; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #ccc; }
+        .undo-btn { color: var(--danger); font-size: 1.2em; cursor: pointer; border: none; background: none; }
+
+        .grand-total { font-size: 1.8em; font-weight: 800; text-align: right; margin: 15px 0; color: var(--dark); }
         
-        .rec-box { 
-            grid-column: span 2; background: #eef6ff; padding: 12px; border-radius: 8px;
-            font-size: 0.85em; display: flex; justify-content: space-between; border-left: 4px solid var(--primary);
-        }
-
-        #list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; padding: 15px; }
-
-        .card { 
-            background: white; border-radius: 12px; overflow: hidden;
-            display: flex; flex-direction: column; border: 1px solid #eee;
-        }
+        .cash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 10px 0; }
+        .cash-btn { padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa; cursor: pointer; font-weight: bold; }
         
-        .card-header { padding: 10px; font-weight: bold; background: #fafafa; border-bottom: 1px solid #eee; text-align: center; }
+        .payment-status { font-weight: bold; text-align: right; padding: 10px; border-radius: 5px; margin-top: 10px; }
+        .status-short { background: #ffebee; color: var(--danger); }
+        .status-change { background: #e8f5e9; color: var(--success); }
 
-        .card-body { padding: 12px; flex-grow: 1; }
-        .detail-line { font-size: 0.8em; color: #666; margin-bottom: 4px; display: flex; justify-content: space-between; }
-        .detail-line b { color: #333; }
-        
-        .price-tag { font-size: 1.3em; font-weight: 800; color: var(--success); margin: 5px 0; display: block; text-align: center; }
-
-        /* Action Buttons Grid */
-        .card-actions { 
-            display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 10px; 
-            background: #f8f9fa; border-top: 1px solid #eee;
-        }
-        .act-btn { 
-            padding: 8px; border: none; border-radius: 6px; font-size: 0.75em; 
-            font-weight: bold; cursor: pointer; color: white;
-        }
-        .btn-sell { background: var(--success); grid-column: span 2; margin-bottom: 5px; font-size: 1em;}
-        .btn-restock { background: var(--info); }
-        .btn-edit { background: var(--warning); color: #333; }
-        .btn-copy { background: var(--primary); }
-        .btn-del { background: var(--danger); }
-
-        .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .fab { width: 50px; height: 50px; border-radius: 50%; border: none; color: white; font-size: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        /* Legacy Classes from Inventory */
+        .card { background: white; border-radius: 12px; margin-bottom: 10px; border: 1px solid #eee; }
+        .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 10px; background: #f8f9fa; }
+        .act-btn { padding: 8px; border: none; border-radius: 6px; font-weight: bold; color: white; cursor: pointer; }
+        input { padding: 12px; border-radius: 8px; border: 1px solid #ddd; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div id="app" style="display:none">
-        <div class="sticky-container">
-            <div class="stat-box"><small>Capital</small><strong id="totalCost">₱0.00</strong></div>
-            <div class="stat-box"><small>Revenue</small><strong id="totalSell">₱0.00</strong></div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('pos')">POS (SELL)</button>
+            <button class="tab-btn" onclick="switchTab('inventory')">INVENTORY</button>
         </div>
 
-        <div class="input-section">
-            <h3 id="formTitle" style="margin-top:0">Add New Item</h3>
-            <div class="grid-inputs">
-                <input type="text" id="name" placeholder="Item Name" class="full-width">
-                <input type="number" id="cost" placeholder="Total Paid" oninput="calcRec()">
-                <input type="number" id="qty" placeholder="Pcs/Qty" oninput="calcRec()">
-                <div class="rec-box">
-                    <span>Unit: <b id="unitCostDisp">0.00</b></span>
-                    <span>Rec: <b id="recPrice">0.00</b></span>
+        <div id="pos" class="view active">
+            <div class="pos-container">
+                <div class="inventory-side">
+                    <div class="search-box">
+                        <input type="text" id="posSearch" placeholder="🔍 Search product to sell..." oninput="renderPOS()">
+                    </div>
+                    <table class="pos-table">
+                        <thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Action</th></tr></thead>
+                        <tbody id="posBody"></tbody>
+                    </table>
                 </div>
-                <input type="number" id="markup" placeholder="Markup %" value="12" oninput="calcRec()">
-                <input type="number" id="sell" placeholder="Selling Price">
-            </div>
-            <div id="formButtons" style="margin-top:15px; display: flex; gap: 10px;">
-                <button id="mainBtn" onclick="addItem()" style="flex:2; background: var(--primary); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">+ Add to Shop</button>
-                <button id="cancelBtn" onclick="resetForm()" style="flex:1; background: #ccc; border:none; border-radius:8px; display:none;">Cancel</button>
+
+                <div class="cart-side">
+                    <div class="cart-section">
+                        <h3 style="margin-top:0">Customer Cart</h3>
+                        <div id="cartList"></div>
+                        <div class="grand-total" id="grandTotal">₱0.00</div>
+                        
+                        <label>Amount Paid:</label>
+                        <input type="number" id="amountPaid" placeholder="0.00" oninput="calcPayment()">
+                        
+                        <div class="cash-grid">
+                            <button class="cash-btn" onclick="quickCash(20)">₱20</button>
+                            <button class="cash-btn" onclick="quickCash(50)">₱50</button>
+                            <button class="cash-btn" onclick="quickCash(100)">₱100</button>
+                            <button class="cash-btn" onclick="quickCash(200)">₱200</button>
+                            <button class="cash-btn" onclick="quickCash(500)">₱500</button>
+                            <button class="cash-btn" onclick="quickCash(1000)">₱1k</button>
+                        </div>
+
+                        <div id="paymentResult" class="payment-status">Ready</div>
+                        <button onclick="completeTransaction()" style="width:100%; padding:15px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:bold; margin-top:15px; font-size:1.1em;">COMPLETE TRANSACTION</button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div style="padding: 0 15px;"><input type="text" id="searchBar" placeholder="🔍 Search inventory..." oninput="render()"></div>
-        <div id="list"></div>
-
-        <div class="fab-container">
-            <button class="fab" style="background: #6c757d;" onclick="fetchData()">🔄</button>
-            <button class="fab" style="background: var(--success);" onclick="syncToCloud()">☁️</button>
+        <div id="inventory" class="view">
+            <div id="inventoryForm">
+                <h3>Manage Products</h3>
+                <input type="text" id="name" placeholder="Item Name">
+                <input type="number" id="cost" placeholder="Total Paid">
+                <input type="number" id="qty" placeholder="Qty">
+                <input type="number" id="sell" placeholder="Selling Price">
+                <button onclick="addItem()" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px;">Add Product</button>
+            </div>
+            <div id="invList" style="margin-top:20px;"></div>
         </div>
     </div>
 
     <div id="setup" style="display:block; padding: 40px; text-align: center;">
-        <h2>Shop Manager Login</h2>
-        <input type="password" id="ghToken" placeholder="GitHub Token" style="margin-bottom:10px;">
-        <input type="text" id="ghRepo" placeholder="username/repo" style="margin-bottom:10px;">
-        <button onclick="saveConfig()" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px;">Connect Shop</button>
+        <h2>Shop Login</h2>
+        <input type="password" id="ghToken" placeholder="GitHub Token">
+        <input type="text" id="ghRepo" placeholder="username/repo">
+        <button onclick="saveConfig()" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px;">Connect</button>
     </div>
 
     <script>
         let inventory = [];
-        let editingIndex = -1;
+        let cart = [];
         let config = JSON.parse(localStorage.getItem('inv_config'));
 
         if (config) {
@@ -128,172 +129,142 @@
             return '₱' + parseFloat(num).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
 
-        function calcRec() {
-            const total = parseFloat(document.getElementById('cost').value) || 0;
-            const pieces = parseFloat(document.getElementById('qty').value) || 1;
-            const mark = parseFloat(document.getElementById('markup').value) || 0;
-            const unit = total / pieces;
-            const rec = unit * (1 + (mark / 100));
-            document.getElementById('unitCostDisp').innerText = unit.toFixed(2);
-            document.getElementById('recPrice').innerText = rec.toFixed(2);
-            if(editingIndex === -1) document.getElementById('sell').value = rec.toFixed(2);
+        function switchTab(tabId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+            render();
         }
 
-        // --- Core Logic ---
+        // --- POS LOGIC ---
 
-        function render() {
-            const listDiv = document.getElementById('list');
-            const searchTerm = document.getElementById('searchBar').value.toLowerCase();
-            let sumCost = 0; let sumSell = 0;
+        function renderPOS() {
+            const search = document.getElementById('posSearch').value.toLowerCase();
+            const body = document.getElementById('posBody');
+            body.innerHTML = inventory.filter(i => i.name.toLowerCase().includes(search)).map((item, idx) => `
+                <tr>
+                    <td><b>${item.name}</b></td>
+                    <td>${formatPHP(item.sell)}</td>
+                    <td>${item.qty}</td>
+                    <td><button onclick="addToCart(${inventory.indexOf(item)})" style="background:var(--primary); color:white; border:none; padding:5px 10px; border-radius:4px;">+ Add</button></td>
+                </tr>
+            `).join('');
+        }
 
-            const filtered = inventory.filter(item => {
-                const match = item.name.toLowerCase().includes(searchTerm);
-                if (match) {
-                    sumCost += parseFloat(item.cost) || 0;
-                    sumSell += (parseFloat(item.sell) * parseFloat(item.qty)) || 0;
-                }
-                return match;
-            });
+        function addToCart(idx) {
+            const item = inventory[idx];
+            if(item.qty <= 0) return alert("Out of stock!");
+            
+            const cartItem = cart.find(c => c.name === item.name);
+            if(cartItem) {
+                if(cartItem.buyQty < item.qty) cartItem.buyQty++;
+                else alert("Limit reached!");
+            } else {
+                cart.push({...item, buyQty: 1, originalIdx: idx});
+            }
+            renderCart();
+        }
 
-            document.getElementById('totalCost').innerText = formatPHP(sumCost);
-            document.getElementById('totalSell').innerText = formatPHP(sumSell);
-
-            listDiv.innerHTML = filtered.map((item, i) => {
-                const idx = inventory.indexOf(item);
-                const unitCost = (parseFloat(item.cost) / (item.qtyInitial || item.qty)) || 0;
-                const profit = parseFloat(item.sell) - unitCost;
-
+        function renderCart() {
+            const list = document.getElementById('cartList');
+            let total = 0;
+            list.innerHTML = cart.map((item, i) => {
+                const subtotal = item.buyQty * item.sell;
+                total += subtotal;
                 return `
-                <div class="card">
-                    <div class="card-header">${item.name}</div>
-                    <div class="card-body">
-                        <span class="price-tag">${formatPHP(item.sell)}</span>
-                        <div class="detail-line">Profit: <b style="color:var(--success)">+${profit.toFixed(2)}</b></div>
-                        <div class="detail-line">Stock: <b>${item.qty}</b></div>
-                    </div>
-                    <div class="card-actions">
-                        <button class="act-btn btn-sell" onclick="sellItem(${idx})">SELL</button>
-                        <button class="act-btn btn-restock" onclick="restockItem(${idx})">Stock</button>
-                        <button class="act-btn btn-edit" onclick="editItem(${idx})">Edit</button>
-                        <button class="act-btn btn-copy" onclick="copyItem(${idx})">Copy</button>
-                        <button class="act-btn btn-del" onclick="deleteItem(${idx})">Del</button>
-                    </div>
+                <div class="cart-item">
+                    <span>${item.name} x${item.buyQty}</span>
+                    <span>${formatPHP(subtotal)} <button class="undo-btn" onclick="removeFromCart(${i})">⟲</button></span>
                 </div>`;
             }).join('');
+            document.getElementById('grandTotal').innerText = formatPHP(total);
+            calcPayment();
         }
 
-        // --- Actions ---
+        function removeFromCart(i) {
+            cart.splice(i, 1);
+            renderCart();
+        }
 
-        function sellItem(idx) {
-            const amount = prompt(`How many "${inventory[idx].name}" are being bought?`, "1");
-            if (amount === null) return;
-            const val = parseInt(amount);
-            if (val > inventory[idx].qty) return alert("Not enough stock!");
-            if (val > 0) {
-                inventory[idx].qty -= val;
-                render();
+        function quickCash(val) {
+            document.getElementById('amountPaid').value = val;
+            calcPayment();
+        }
+
+        function calcPayment() {
+            const total = cart.reduce((sum, item) => sum + (item.buyQty * item.sell), 0);
+            const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+            const res = document.getElementById('paymentResult');
+
+            if (total === 0) { res.innerText = "Cart is empty"; return; }
+
+            if (paid < total) {
+                res.className = "payment-status status-short";
+                res.innerText = `Short: ${formatPHP(total - paid)}`;
+            } else {
+                res.className = "payment-status status-change";
+                res.innerText = `Change: ${formatPHP(paid - total)}`;
             }
         }
 
-        function restockItem(idx) {
-            const amount = prompt(`How many "${inventory[idx].name}" are you adding to stock?`);
-            if (amount === null) return;
-            const val = parseInt(amount);
-            if (val > 0) {
-                inventory[idx].qty = (parseInt(inventory[idx].qty) || 0) + val;
-                render();
-            }
+        function completeTransaction() {
+            if(cart.length === 0) return;
+            
+            // Deduct from main inventory
+            cart.forEach(cItem => {
+                inventory[cItem.originalIdx].qty -= cItem.buyQty;
+            });
+
+            alert("Transaction Complete! Inventory Updated.");
+            cart = [];
+            document.getElementById('amountPaid').value = '';
+            render(); 
+            renderCart();
         }
 
-        function editItem(idx) {
-            editingIndex = idx;
-            const item = inventory[idx];
-            document.getElementById('name').value = item.name;
-            document.getElementById('cost').value = item.cost;
-            document.getElementById('qty').value = item.qty;
-            document.getElementById('sell').value = item.sell;
-            document.getElementById('formTitle').innerText = "Editing Item";
-            document.getElementById('mainBtn').innerText = "Update Item";
-            document.getElementById('cancelBtn').style.display = "block";
-            window.scrollTo(0,0);
-        }
-
-        function copyItem(idx) {
-            const item = inventory[idx];
-            document.getElementById('name').value = item.name + " (Copy)";
-            document.getElementById('cost').value = item.cost;
-            document.getElementById('qty').value = item.qty;
-            document.getElementById('sell').value = item.sell;
-            document.getElementById('formTitle').innerText = "Copying Item";
-            window.scrollTo(0,0);
-        }
-
-        function deleteItem(idx) {
-            if (confirm(`Are you sure you want to delete "${inventory[idx].name}"?`)) {
-                inventory.splice(idx, 1);
-                render();
-            }
+        // --- INVENTORY LOGIC ---
+        function render() {
+            renderPOS();
+            const invList = document.getElementById('invList');
+            invList.innerHTML = inventory.map((item, i) => `
+                <div class="card">
+                    <div style="padding:10px"><b>${item.name}</b> - Stock: ${item.qty}</div>
+                    <div class="card-actions">
+                        <button class="act-btn" style="background:var(--danger)" onclick="deleteItem(${i})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
         }
 
         function addItem() {
-            const n = document.getElementById('name').value.trim();
-            const q = parseFloat(document.getElementById('qty').value);
+            const n = document.getElementById('name').value;
+            const q = parseInt(document.getElementById('qty').value);
             const c = parseFloat(document.getElementById('cost').value);
             const s = parseFloat(document.getElementById('sell').value);
-
-            if (!n || q <= 0 || c <= 0 || s <= 0) return alert("Values must be greater than 0");
-
-            if (editingIndex > -1) {
-                inventory[editingIndex] = { name: n, qty: q, qtyInitial: q, cost: c, sell: s };
-                resetForm();
-            } else {
-                if (inventory.some(i => i.name.toLowerCase() === n.toLowerCase())) return alert("Duplicate name!");
-                inventory.push({ name: n, qty: q, qtyInitial: q, cost: c, sell: s });
-            }
+            inventory.push({name:n, qty:q, cost:c, sell:s});
             render();
-            resetForm();
         }
 
-        function resetForm() {
-            editingIndex = -1;
-            ['name','qty','cost','sell'].forEach(id => document.getElementById(id).value = '');
-            document.getElementById('formTitle').innerText = "Add New Item";
-            document.getElementById('mainBtn').innerText = "+ Add to Shop";
-            document.getElementById('cancelBtn').style.display = "none";
-        }
+        function deleteItem(i) { if(confirm("Delete?")) { inventory.splice(i,1); render(); } }
 
-        // --- Cloud Logic ---
+        // --- CLOUD LOGIC ---
         async function fetchData() {
             try {
-                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
                     headers: { 'Authorization': `Bearer ${config.token}` }
                 });
                 const file = await res.json();
                 inventory = JSON.parse(decodeURIComponent(escape(atob(file.content))) || "[]");
                 render();
-            } catch (err) { alert("Load Error"); }
+            } catch (err) { console.log("Init failed"); }
         }
 
-        async function syncToCloud() {
-            try {
-                const getRes = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
-                    headers: { 'Authorization': `Bearer ${config.token}` }
-                });
-                const file = await getRes.json();
-                const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(inventory))));
-                await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${config.token}` },
-                    body: JSON.stringify({ message: "Update", content: b64, sha: file.sha })
-                });
-                alert("Shop Synced!");
-            } catch (err) { alert("Sync Error"); }
-        }
-
-        function saveConfig() { 
-            const t = document.getElementById('ghToken').value; 
-            const r = document.getElementById('ghRepo').value; 
-            if(t && r) { localStorage.setItem('inv_config', JSON.stringify({token:t, repo:r})); location.reload(); }
+        function saveConfig() {
+            const t = document.getElementById('ghToken').value;
+            const r = document.getElementById('ghRepo').value;
+            localStorage.setItem('inv_config', JSON.stringify({token:t, repo:r}));
+            location.reload();
         }
     </script>
 </body>
