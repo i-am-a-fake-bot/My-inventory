@@ -31,6 +31,11 @@
         .view { display: none; padding: 15px; max-width: 1200px; margin: 0 auto; }
         .view.active { display: block; }
 
+        #salesLogList::-webkit-scrollbar, 
+        #activityLogList::-webkit-scrollbar { width: 4px; }
+        #salesLogList::-webkit-scrollbar-thumb, 
+        #activityLogList::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+
         #list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 
         #list:empty::after { content: "No products found. Tap 'Add' to begin!"; grid-column: 1 / -1; text-align: center; padding: 40px; color: #999; font-style: italic; }
@@ -222,21 +227,17 @@
         </div>
     </div>
 
-
-        <div id="viewLogs" class="view">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div style="background: white; padding: 15px; border-radius: 12px; border: 1px solid #ddd;">
-                    <h3 style="margin-top:0; font-size: 0.9em; color: var(--success);">Recent Transactions</h3>
-                    <div id="salesLogList" style="font-size: 0.8em; max-height: 400px; overflow-y: auto;"></div>
-                </div>
-                
-                <div style="background: white; padding: 15px; border-radius: 12px; border: 1px solid #ddd;">
-                    <h3 style="margin-top:0; font-size: 0.9em; color: var(--info);">System Activity</h3>
-                    <div id="activityLogList" style="font-size: 0.8em; max-height: 400px; overflow-y: auto;"></div>
-                </div>
-            </div>
+    <div id="viewLogs" class="view">
+        <div style="background: white; padding: 15px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 20px;">
+            <h3 style="margin-top:0; font-size: 1em; color: var(--success); border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">📰 Recent Transactions</h3>
+            <div id="salesLogList" style="font-size: 0.9em; max-height: 350px; overflow-y: auto;"></div>
         </div>
-
+        
+        <div style="background: white; padding: 15px; border-radius: 12px; border: 1px solid #ddd;">
+            <h3 style="margin-top:0; font-size: 1em; color: var(--info); border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">⚙️ System Activity</h3>
+            <div id="activityLogList" style="font-size: 0.9em; max-height: 350px; overflow-y: auto;"></div>
+        </div>
+    </div>
 
     <script>
         let inventory = [];
@@ -245,9 +246,9 @@
         let editingIndex = -1;
         let isDirty = false;
         let config = JSON.parse(localStorage.getItem('inv_config'));
-        let activityLogs = []; // Add this at the top with your other lets
+        let activityLogs = [];
 
-        // Handle initial login check
+        // 1. Handle initial login check
         if (!config) { 
             document.getElementById('setup').style.display = 'block'; 
             document.getElementById('app').style.display = 'none';
@@ -255,7 +256,7 @@
             fetchData(); 
         }
 
-        // 11. Page refresh warning
+        // 2. Page refresh warning
         window.addEventListener('beforeunload', (e) => {
             if (isDirty) {
                 e.preventDefault();
@@ -266,11 +267,9 @@
         function formatPHP(num) { return '₱' + parseFloat(num).toFixed(2); }
 
         function switchTab(tab) {
-            // 1. Remove 'active' from everything first
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         
-            // 2. Decide which ID to turn on based on the tab name
             let vId, bId;
             if (tab === 'pos') {
                 vId = 'viewPos'; bId = 'btnPos';
@@ -278,25 +277,21 @@
                 vId = 'viewInv'; bId = 'btnInv';
             } else if (tab === 'logs') {
                 vId = 'viewLogs'; bId = 'btnLogs';
-                renderLogs(); // Special refresh for the logs list
+                renderLogs(); 
             }
 
-    // 3. Actually turn them on
-    document.getElementById(vId).classList.add('active');
-    document.getElementById(bId).classList.add('active');
+            document.getElementById(vId).classList.add('active');
+            document.getElementById(bId).classList.add('active');
+        
+            render(); 
+            renderPOS();
+        }
 
-    // 4. Refresh data displays
-    render(); 
-    renderPOS();
-}
-
-        // UPDATED: Calculate Unit Cost and Recommendation
         function calcRec() {
             const totalCapital = parseFloat(document.getElementById('cost').value) || 0;
             const batchSize = parseFloat(document.getElementById('qtyInitial').value) || 1;
             const markup = parseFloat(document.getElementById('markup').value) || 0;
             
-            // This is the core fix: Define the unit cost clearly
             const unitCost = totalCapital / batchSize;
             const recommendedSell = unitCost * (1 + (markup / 100));
             
@@ -309,11 +304,9 @@
             document.getElementById('sell').value = val.toFixed(2); 
         }
 
-        // FIX: Added qtyInitial to clearForm
         function clearForm() {
             editingIndex = -1;
             document.getElementById('formTitle').innerText = "Add New Product";
-            // Added 'qtyInitial' to the reset list
             ['name','cost','qty','qtyInitial','sell'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('recVal').innerText = "₱0.00";
         }
@@ -338,7 +331,6 @@
                 const isLow = item.qty > 0 && item.qty <= 3;
                 const isOut = item.qty <= 0;
 
-                // ✅ Safe quantity display
                 const displayQty = Math.max(0, item.qty);
 
                 return `
@@ -427,7 +419,6 @@
             }
         }
 
-        // UPDATED: Complete Sale using the locked unitCost
         function completeSale() {
             if(!config) return;
             const total = cart.reduce((sum, i) => sum + (i.sell * i.buyQty), 0);
@@ -436,26 +427,22 @@
             if(cart.length === 0) return;
             if(paid < total) return alert("Payment is short!");
             
-            // --- 🛒 IMPROVED LOGGING START ---
-            // Create a detailed string: "Milo x2, Bread x1 (Total: ₱150.00)"
             const itemDetails = cart.map(c => `${c.name} x${c.buyQty}`).join(', ');
             logActivity(`Sale Confirmed: ${itemDetails} (Total: ₱${total.toFixed(2)})`);
-            // --- 🛒 IMPROVED LOGGING END ---
             
             cart.forEach(c => {
                 const item = inventory[c.idx];
-                // Use the locked unitCost instead of calculating it on the fly
                 const profitPerUnit = item.sell - (item.unitCost || 0);
                 
                 salesHistory.push({ 
-                    name: item.name, // <--- ADD THIS LINE
-                    qty: c.buyQty,   // <--- ADD THIS LINE (optional, to see how many)                    
+                    name: item.name, 
+                    qty: c.buyQty,                  
                     revenue: c.sell * c.buyQty, 
                     profit: profitPerUnit * c.buyQty, 
                     date: new Date().toISOString() 
                 });
                 item.qty -= c.buyQty;
-                // --- 🚩 NEW: Automatic Low Stock Alerts ---
+
                 if (item.qty <= 0) {
                     logActivity(`🚨 SOLD OUT: ${item.name} is out of stock!`);
                 } else if (item.qty <= 3) {
@@ -484,14 +471,13 @@
 
         function logActivity(msg) {
             const entry = { msg, time: new Date().toLocaleTimeString() };
-            activityLogs.unshift(entry); // Newest first
-            if(activityLogs.length > 50) activityLogs.pop(); // Keep it lightweight
+            activityLogs.unshift(entry);
+            if(activityLogs.length > 50) activityLogs.pop(); 
         }
         
         function renderLogs() {
             const sList = document.getElementById('salesLogList');
             if (sList) {
-                // .slice().reverse() ensures the newest sale is always at the top
                 sList.innerHTML = salesHistory.slice().reverse().map(s => `
                     <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
                         <div style="display:flex; justify-content:space-between; align-items: center;">
@@ -511,7 +497,7 @@
                 aList.innerHTML = activityLogs.map(a => `
                     <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
                         <div style="color:#444; font-size: 0.9em; line-height: 1.3;">${a.msg}</div>
-                        <div style="color:#bbb; font-size:0.75em; margin-top: 2px;">🕒 ${a.time}</div>
+                        <div style="color:#bbb; font-size:0.75em; margin-top: 2px;">${a.time}</div>
                     </div>
                 `).join('') || "No activity yet.";
             }
@@ -583,7 +569,7 @@
             btn.classList.remove('syncing');
         }
 
-        // 12. Smart Sync every 5 mins
+        // 3. Smart Sync every 5 mins
         setInterval(() => { if (config && isDirty) syncToCloud(); }, 300000);
 
         function saveConfig() {
@@ -604,7 +590,6 @@
             }
         }
 
-        // FIX: Ensure addItem uses the current form values for unitCost
         function addItem() {
             if(!config) { logout(); return; }
             const n = document.getElementById('name').value;
@@ -623,7 +608,7 @@
                 qtyInitial: initial,  
                 qty: current,         
                 sell: s, 
-                unitCost: capital / initial // This is your "Anchor" for profit
+                unitCost: capital / initial
             };
         
             if (editingIndex > -1) {
@@ -646,7 +631,6 @@
                     unitCost: updateUnitCost ? capital / initial : existing.unitCost
                 };
             } else {
-                // New item
                 inventory.push({
                     name: n,
                     cost: capital,
@@ -666,14 +650,13 @@
             render();
         } 
 
-        // FIX: Ensure editItem loads the Batch Size
         function editItem(idx) {
             editingIndex = idx;
             const item = inventory[idx];
             document.getElementById('formTitle').innerText = "Editing: " + item.name;
             document.getElementById('name').value = item.name;
             document.getElementById('cost').value = item.cost;
-            document.getElementById('qtyInitial').value = item.qtyInitial || 1; // Load Batch Size
+            document.getElementById('qtyInitial').value = item.qtyInitial || 1;
             document.getElementById('qty').value = item.qty;
             document.getElementById('sell').value = item.sell;
             calcRec();
@@ -687,30 +670,27 @@
             document.getElementById('cost').value = item.cost;
             document.getElementById('qty').value = item.qty;
             document.getElementById('sell').value = item.sell;
-            document.getElementById('qtyInitial').value = item.qtyInitial || 1;  // ✅ Added this line
+            document.getElementById('qtyInitial').value = item.qtyInitial || 1; 
             calcRec();
             editingIndex = -1;
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
         function deleteItem(idx) { 
-            const itemName = inventory[idx].name; // Get name first
+            const itemName = inventory[idx].name;
             
-            // 1. Ask for the reason
+            // 4. Before delete ask for the reason
             const reason = prompt(`Reason for deleting "${itemName}"? (Required)`); 
             
-            // 2. Check if they provided a reason (and didn't hit cancel)
-            if (reason === null) return; // They hit cancel, stop here
+            if (reason === null) return; 
             
             if (reason.trim() === "") {
                 alert("You must provide a reason to delete a product.");
                 return;
             }
         
-            // 3. Log the deletion WITH the reason
             logActivity(`DELETED: ${itemName} - Reason: ${reason}`);
             
-            // 4. Proceed with deletion
             inventory.splice(idx, 1); 
             isDirty = true;
             
@@ -720,19 +700,16 @@
             render(); 
         }
 
-        // FIX: Adjusted restock to keep unitCost stable
         function restockItem(idx) { 
                     const amt = prompt("How many units to add to current stock?"); 
                     if(amt && !isNaN(amt)) { 
-                        const addedQty = parseInt(amt); // Save the number to a variable
+                        const addedQty = parseInt(amt); 
                         inventory[idx].qty += addedQty; 
                         
-                        // 1. Log it BEFORE saving
                         logActivity(`Restocked: ${inventory[idx].name} (+${addedQty})`);
                         
                         isDirty = true;
                         
-                        // 2. Save it (Make sure activityLogs is in the list!)
                         localStorage.setItem('offline_data', JSON.stringify({ 
                             inventory, 
                             salesHistory, 
