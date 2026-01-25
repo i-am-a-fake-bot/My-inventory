@@ -415,6 +415,8 @@
                 const profitPerUnit = item.sell - (item.unitCost || 0);
                 
                 salesHistory.push({ 
+                    name: item.name, // <--- ADD THIS LINE
+                    qty: c.buyQty,   // <--- ADD THIS LINE (optional, to see how many)                    
                     revenue: c.sell * c.buyQty, 
                     profit: profitPerUnit * c.buyQty, 
                     date: new Date().toISOString() 
@@ -448,26 +450,33 @@
         }
         
         function renderLogs() {
-            // Render Sales
+            // 1. Render Sales (Left Box)
             const sList = document.getElementById('salesLogList');
-            sList.innerHTML = salesHistory.slice().reverse().map(s => `
-                <div style="border-bottom: 1px solid #eee; padding: 8px 0;">
-                    <div style="display:flex; justify-content:space-between;">
-                        <b>+${formatPHP(s.revenue)}</b>
-                        <span style="color:#888; font-size:0.8em;">${new Date(s.date).toLocaleTimeString()}</span>
+            if (sList) {
+                sList.innerHTML = salesHistory.slice().reverse().map(s => `
+                    <div style="border-bottom: 1px solid #eee; padding: 8px 0;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <b style="color:#333;">${s.name || 'Item'} (x${s.qty || 1})</b>
+                            <b style="color:var(--primary);">+${formatPHP(s.revenue)}</b>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.85em; color:var(--success)">Profit: ${formatPHP(s.profit)}</span>
+                            <span style="color:#888; font-size:0.75em;">${new Date(s.date).toLocaleTimeString()}</span>
+                        </div>
                     </div>
-                    <div style="font-size:0.9em; color:var(--success)">Profit: ${formatPHP(s.profit)}</div>
-                </div>
-            `).join('') || "No sales yet.";
+                `).join('') || "No sales yet.";
+            }
         
-            // Render Activity
+            // 2. Render Activity (Right Box)
             const aList = document.getElementById('activityLogList');
-            aList.innerHTML = activityLogs.map(a => `
-                <div style="border-bottom: 1px solid #eee; padding: 8px 0;">
-                    <div style="color:#555;">${a.msg}</div>
-                    <div style="color:#888; font-size:0.8em;">${a.time}</div>
-                </div>
-            `).join('') || "No activity yet.";
+            if (aList) {
+                aList.innerHTML = activityLogs.map(a => `
+                    <div style="border-bottom: 1px solid #eee; padding: 8px 0;">
+                        <div style="color:#555;">${a.msg}</div>
+                        <div style="color:#888; font-size:0.8em;">${a.time}</div>
+                    </div>
+                `).join('') || "No activity yet.";
+            }
         }
 
 
