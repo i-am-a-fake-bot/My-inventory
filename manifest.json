@@ -7,7 +7,7 @@
   "theme_color": "#f0ead6",
   "icons": [
     {
-      "src": "online-shopping.png",
+      "src": "supply.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
