@@ -372,10 +372,18 @@
 
         function addToCart(idx) {
             const item = inventory[idx];
-            let count = prompt(`How many "${item.name}" are being bought?`, "1");
-            if (count === null) return;
-            count = parseInt(count);
-            if (isNaN(count) || count <= 0) return alert("Invalid quantity");
+            // Change 1: Save prompt to 'raw' so we can check for letters
+            let raw = prompt(`Ilang "${item.name}" ang binibili?`, "1");
+            
+            // Change 2: Handle Cancel button and Block letters/decimals
+            if (raw === null) return;
+            if (!/^\d+$/.test(raw.trim())) {
+                return alert("❌ Numbers only please (no letters or dots).");
+            }
+
+            // Change 3: Convert to number and run your original stock checks
+            let count = parseInt(raw);
+            if (count <= 0) return alert("Invalid quantity");
             if (count > item.qty) return alert(`Only ${item.qty} left in stock!`);
 
             const inCart = cart.find(c => c.idx === idx);
@@ -383,7 +391,12 @@
                 if (inCart.buyQty + count <= item.qty) inCart.buyQty += count;
                 else alert("Not enough stock for that total.");
             } else { cart.push({...item, buyQty: count, idx: idx}); }
+            
+            document.getElementById('posSearch').value = ''; 
+            document.getElementById('posSearch').focus();
+
             renderCart();
+            renderPOS();
         }
 
         function renderCart() {
@@ -460,6 +473,7 @@
             renderLogs();
             
             render(); renderPOS(); renderCart(); 
+            syncToCloud();
             alert("Sale Completed!");
         }
 
@@ -507,6 +521,7 @@
 
 
         async function fetchData() {
+            if (cart.length > 0) { if (!confirm("You have items in the cart! Refreshing will clear them. Continue?")) return; }
             if(!config) return;
             const syncIcon = document.querySelector('.fab[title="Refresh"]');
             syncIcon.classList.add('syncing');
