@@ -656,21 +656,33 @@
         }
 
         function deleteItem(idx) { 
-            if(confirm("Delete this product forever?")) { 
-                
-                logActivity(`Deleted: ${inventory[idx].name}`);
-                
-                inventory.splice(idx,1); 
-                isDirty = true;
-              
-                localStorage.setItem('offline_data', JSON.stringify({ 
-                    inventory, 
-                    salesHistory, 
-                    activityLogs // Keep logs offline too
-                }));
-                
-                render(); 
-            } 
+            const itemName = inventory[idx].name; // Get name first
+            
+            // 1. Ask for the reason
+            const reason = prompt(`Reason for deleting "${itemName}"? (Required)`); 
+            
+            // 2. Check if they provided a reason (and didn't hit cancel)
+            if (reason === null) return; // They hit cancel, stop here
+            
+            if (reason.trim() === "") {
+                alert("You must provide a reason to delete a product.");
+                return;
+            }
+        
+            // 3. Log the deletion WITH the reason
+            logActivity(`DELETED: ${itemName} - Reason: ${reason}`);
+            
+            // 4. Proceed with deletion
+            inventory.splice(idx, 1); 
+            isDirty = true;
+            
+            localStorage.setItem('offline_data', JSON.stringify({ 
+                inventory, 
+                salesHistory, 
+                activityLogs 
+            }));
+            
+            render(); 
         }
 
         // FIX: Adjusted restock to keep unitCost stable
