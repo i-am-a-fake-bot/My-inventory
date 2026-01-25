@@ -66,9 +66,9 @@
         .field-group { margin-bottom: 5px; }
         .field-group label { display: block; font-size: 0.65em; font-weight: bold; color: #666; text-transform: uppercase; margin-left: 5px; }
         
-        .input-wrapper { position: relative; }
-        .input-wrapper::before { content: '₱'; position: absolute; left: 10px; top: 12px; font-size: 0.9em; color: #666; }
-        .input-wrapper input { padding-left: 25px; }
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+        .input-wrapper::before { content: '₱'; position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font-size: 0.8em;  color: #666; z-index: 5; }
+        .input-wrapper input { padding-left: 18px !important; }
 
         .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 3000; }
         .fab { width: 50px; height: 50px; border-radius: 50%; border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
@@ -155,19 +155,26 @@
             
                     <div class="field-group">
                         <label style="font-size: 0.75em; white-space: nowrap;">Supplier Cost</label>
-                        <input type="number" step="0.01" id="cost" placeholder="0.00" oninput="calcRec()" style="padding: 8px 4px;">
+                        <div class="input-wrapper">
+                            <input type="number" step="0.01" id="cost" placeholder="0.00" oninput="calcRec()" style="padding: 8px 4px 8px 18px;">
+                        </div>
                     </div>
+                    
                     <div class="field-group">
                         <label style="font-size: 0.75em; white-space: nowrap;">Units in Pack</label>
                         <input type="number" id="qtyInitial" placeholder="12" oninput="calcRec()" style="padding: 8px 4px;">
                     </div>
+                    
                     <div class="field-group">
                         <label style="font-size: 0.75em; white-space: nowrap;">Current Stock</label>
                         <input type="number" id="qty" placeholder="12" style="padding: 8px 4px;">
                     </div>
+                    
                     <div class="field-group">
                         <label style="font-size: 0.75em; white-space: nowrap;">Price (SRP)</label>
-                        <input type="number" step="0.01" id="sell" placeholder="0.00" style="padding: 8px 4px;">
+                        <div class="input-wrapper">
+                            <input type="number" step="0.01" id="sell" placeholder="0.00" style="padding: 8px 4px 8px 18px;">
+                        </div>
                     </div>
             
                     <div class="rec-note" style="grid-column: span 4; display: flex; align-items: center; gap: 10px; background: #e9ecef; padding: 6px 10px; border-radius: 8px; margin: 5px 0; width: fit-content;">
@@ -175,7 +182,7 @@
                             Markup: <input type="number" id="markup" value="12" oninput="calcRec()" style="width: 32px; padding: 2px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 0.85em;">%
                         </div>
                         <div style="font-size: 0.82em; color: #444;">
-                            Rec: <b id="recVal">₱0.00</b>
+                            Recommended Price (SRP): <b id="recVal">₱0.00</b>
                         </div>
                         <button class="use-btn" onclick="useRec()" style="padding: 2px 8px; font-size: 0.7em; border-radius: 4px;">💡 USE</button>
                     </div>
