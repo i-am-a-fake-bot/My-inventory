@@ -174,10 +174,11 @@
         
                     <div class="rec-note" style="grid-column: span 2; display: flex; align-items: center; justify-content: space-between; gap: 5px; background: #e9ecef; padding: 8px 10px; border-radius: 8px; margin: 10px 0;">
                         <div style="font-size: 0.82em; color: #444;">
-                            Markup: <input type="number" id="markup" value="12" oninput="calcRec()" style="width: 35px; padding: 2px; border: 1px solid #ccc; border-radius: 4px; text-align: center;">%
+                            Markup: <input type="number" id="markup" value="12" oninput="calcRec()" 
+                                style="width: 35px; padding: 2px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 0.9em; height: auto;"> %
                         </div>
                         <div style="font-size: 0.82em; color: #444;">
-                            Recommended Price: <b id="recVal" style="color: var(--dark);">₱0.00</b>
+                            Rec: <b id="recVal" style="color: var(--dark);">₱0.00</b>
                         </div>
                         <button class="use-btn" onclick="useRec()" style="padding: 4px 8px; font-size: 0.75em; border-radius: 4px;">💡 USE</button>
                     </div>
