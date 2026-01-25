@@ -4,7 +4,7 @@ const ASSETS = [
   './index.html',
   './offline.html',
   './manifest.json',
-  'online-shopping.png'
+  'supply.png'
 ];
 
 self.addEventListener('install', (e) => {
