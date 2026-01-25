@@ -28,10 +28,23 @@
         .tab-btn { flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.1); color: white; border-radius: 5px; font-weight: bold; cursor: pointer; }
         .tab-btn.active { background: var(--primary); }
 
-        .view { display: none; padding: 15px; }
+        .view { display: none; padding: 15px; max-width: 1200px; margin: 0 auto; }
         .view.active { display: block; }
 
         #list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+        #list:empty::after { content: "No products found. Tap 'Add' to begin!"; grid-column: 1 / -1; text-align: center; padding: 40px; color: #999; font-style: italic; }
+        
+        /* Tablets: 3 columns (Screens wider than 600px) */
+        @media (min-width: 600px) {
+            #list { grid-template-columns: repeat(3, 1fr); }
+        }
+        
+        /* PC/Laptops: 4 or 5 columns (Screens wider than 1000px) */
+        @media (min-width: 1000px) {
+            #list { grid-template-columns: repeat(5, 1fr); }
+        }        
+        
         .card { background: white; border-radius: 12px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; position: relative; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         
         .card:active { transform: scale(0.98); background: #fdfdfd; }
