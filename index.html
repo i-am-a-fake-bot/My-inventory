@@ -513,7 +513,7 @@
         
             try {
                 const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
-                    headers: { 'Authorization': `Bearer ${config.token}`, 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+                    headers: { 'Authorization': `Bearer ${config.token}` }
                 });
                 if(res.ok) {
                     const file = await res.json();
