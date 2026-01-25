@@ -238,16 +238,29 @@
         function formatPHP(num) { return '₱' + parseFloat(num).toFixed(2); }
 
         function switchTab(tab) {
+            // 1. Remove 'active' from everything first
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(tab === 'pos' ? 'viewPos' : 'viewInv').classList.add('active');
-            document.getElementById(tab === 'pos' ? 'btnPos' : 'btnInv').classList.add('active');
-            document.getElementById(targetView).classList.add('active');
-            document.getElementById(targetBtn).classList.add('active');
-            
-            if(tab === 'logs') renderLogs();            
-            render(); renderPOS();
-        }
+        
+            // 2. Decide which ID to turn on based on the tab name
+            let vId, bId;
+            if (tab === 'pos') {
+                vId = 'viewPos'; bId = 'btnPos';
+            } else if (tab === 'inventory') {
+                vId = 'viewInv'; bId = 'btnInv';
+            } else if (tab === 'logs') {
+                vId = 'viewLogs'; bId = 'btnLogs';
+                renderLogs(); // Special refresh for the logs list
+            }
+
+    // 3. Actually turn them on
+    document.getElementById(vId).classList.add('active');
+    document.getElementById(bId).classList.add('active');
+
+    // 4. Refresh data displays
+    render(); 
+    renderPOS();
+}
 
         // UPDATED: Calculate Unit Cost and Recommendation
         function calcRec() {
