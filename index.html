@@ -675,17 +675,26 @@
 
         // FIX: Adjusted restock to keep unitCost stable
         function restockItem(idx) { 
-            const amt = prompt("How many units to add to current stock?"); 
-            if(amt && !isNaN(amt)) { 
-                inventory[idx].qty += parseInt(amt); 
-                // We DON'T change qtyInitial here because that would change the old unitCost calculation
-                isDirty = true;
-                
-                localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory, activityLogs }));
-
-                render(); 
-            } 
-        }
+                    const amt = prompt("How many units to add to current stock?"); 
+                    if(amt && !isNaN(amt)) { 
+                        const addedQty = parseInt(amt); // Save the number to a variable
+                        inventory[idx].qty += addedQty; 
+                        
+                        // 1. Log it BEFORE saving
+                        logActivity(`Restocked: ${inventory[idx].name} (+${addedQty})`);
+                        
+                        isDirty = true;
+                        
+                        // 2. Save it (Make sure activityLogs is in the list!)
+                        localStorage.setItem('offline_data', JSON.stringify({ 
+                            inventory, 
+                            salesHistory, 
+                            activityLogs 
+                        }));
+        
+                        render(); 
+                    } 
+                }
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.log("SW failed", err));
