@@ -104,6 +104,7 @@
             <div class="tabs">
                 <button class="tab-btn active" id="btnPos" onclick="switchTab('pos')">🛒 Checkout</button>
                 <button class="tab-btn" id="btnInv" onclick="switchTab('inventory')">📦 Inventory</button>
+                <button class="tab-btn" id="btnLogs" onclick="switchTab('logs')">📋 Logs</button>
             </div>
         </div>
 
@@ -191,6 +192,22 @@
         </div>
     </div>
 
+
+        <div id="viewLogs" class="view">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="background: white; padding: 15px; border-radius: 12px; border: 1px solid #ddd;">
+                    <h3 style="margin-top:0; font-size: 0.9em; color: var(--success);">Recent Transactions</h3>
+                    <div id="salesLogList" style="font-size: 0.8em; max-height: 400px; overflow-y: auto;"></div>
+                </div>
+                
+                <div style="background: white; padding: 15px; border-radius: 12px; border: 1px solid #ddd;">
+                    <h3 style="margin-top:0; font-size: 0.9em; color: var(--info);">System Activity</h3>
+                    <div id="activityLogList" style="font-size: 0.8em; max-height: 400px; overflow-y: auto;"></div>
+                </div>
+            </div>
+        </div>
+
+
     <script>
         let inventory = [];
         let salesHistory = [];
@@ -198,6 +215,7 @@
         let editingIndex = -1;
         let isDirty = false;
         let config = JSON.parse(localStorage.getItem('inv_config'));
+        let activityLogs = []; // Add this at the top with your other lets
 
         // Handle initial login check
         if (!config) { 
@@ -222,6 +240,10 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(tab === 'pos' ? 'viewPos' : 'viewInv').classList.add('active');
             document.getElementById(tab === 'pos' ? 'btnPos' : 'btnInv').classList.add('active');
+            document.getElementById(targetView).classList.add('active');
+            document.getElementById(targetBtn).classList.add('active');
+            
+            if(tab === 'logs') renderLogs();            
             render(); renderPOS();
         }
 
@@ -369,7 +391,9 @@
             
             if(cart.length === 0) return;
             if(paid < total) return alert("Payment is short!");
-        
+            
+            logActivity(`Sale Confirmed: ${cart.length} items (Total: ₱${total.toFixed(2)})`);
+            
             cart.forEach(c => {
                 const item = inventory[c.idx];
                 // Use the locked unitCost instead of calculating it on the fly
@@ -388,7 +412,7 @@
             document.getElementById('amtPaid').value = '';
             
             // 🔹 Save updated inventory & salesHistory for offline mode
-            localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory }));
+            localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory, activityLogs }));
 
             render(); renderPOS(); renderCart(); 
             alert("Sale Completed!");
@@ -400,6 +424,37 @@
             document.getElementById('weeklySales').innerText = formatPHP(sales);
             document.getElementById('weeklyProfit').innerText = formatPHP(profit);
         }
+
+
+        function logActivity(msg) {
+            const entry = { msg, time: new Date().toLocaleTimeString() };
+            activityLogs.unshift(entry); // Newest first
+            if(activityLogs.length > 50) activityLogs.pop(); // Keep it lightweight
+        }
+        
+        function renderLogs() {
+            // Render Sales
+            const sList = document.getElementById('salesLogList');
+            sList.innerHTML = salesHistory.slice().reverse().map(s => `
+                <div style="border-bottom: 1px solid #eee; padding: 8px 0;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <b>+${formatPHP(s.revenue)}</b>
+                        <span style="color:#888; font-size:0.8em;">${new Date(s.date).toLocaleTimeString()}</span>
+                    </div>
+                    <div style="font-size:0.9em; color:var(--success)">Profit: ${formatPHP(s.profit)}</div>
+                </div>
+            `).join('') || "No sales yet.";
+        
+            // Render Activity
+            const aList = document.getElementById('activityLogList');
+            aList.innerHTML = activityLogs.map(a => `
+                <div style="border-bottom: 1px solid #eee; padding: 8px 0;">
+                    <div style="color:#555;">${a.msg}</div>
+                    <div style="color:#888; font-size:0.8em;">${a.time}</div>
+                </div>
+            `).join('') || "No activity yet.";
+        }
+
 
         async function fetchData() {
             if(!config) return;
@@ -415,9 +470,10 @@
                     const content = JSON.parse(decodeURIComponent(escape(atob(file.content))));
                     inventory = content.inventory || [];
                     salesHistory = content.salesHistory || [];
+                    activityLogs = content.activityLogs || [];
         
                     // 🔹 Save for offline use
-                    localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory }));
+                    localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory, activityLogs }));
         
                     document.getElementById('syncStatus').innerText = "Cloud Synced: " + new Date().toLocaleTimeString();
                 }
@@ -451,7 +507,7 @@
                     headers: { 'Authorization': `Bearer ${config.token}` }
                 });
                 const file = await res.json();
-                const content = btoa(unescape(encodeURIComponent(JSON.stringify({ inventory, salesHistory }))));
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify({ inventory, salesHistory, activityLogs }))));
                 const update = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${config.token}` },
@@ -497,6 +553,8 @@
         
             if(!n) return alert("Product name is required");
         
+            logActivity(`Inventory Update: ${n}`);
+        
             const obj = { 
                 name: n, 
                 cost: capital,        
@@ -540,7 +598,7 @@
             isDirty = true;
             
             // 🔹 Save for offline mode immediately
-            localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory }));
+            localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory, activityLogs }));
             
             clearForm();
             render();
@@ -575,10 +633,17 @@
 
         function deleteItem(idx) { 
             if(confirm("Delete this product forever?")) { 
+                
+                logActivity(`Deleted: ${inventory[idx].name}`);
+                
                 inventory.splice(idx,1); 
                 isDirty = true;
-                
-                localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory }));
+              
+                localStorage.setItem('offline_data', JSON.stringify({ 
+                    inventory, 
+                    salesHistory, 
+                    activityLogs // Keep logs offline too
+                }));
                 
                 render(); 
             } 
@@ -592,7 +657,7 @@
                 // We DON'T change qtyInitial here because that would change the old unitCost calculation
                 isDirty = true;
                 
-                localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory }));
+                localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory, activityLogs }));
 
                 render(); 
             } 
