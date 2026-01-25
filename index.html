@@ -407,7 +407,11 @@
             if(cart.length === 0) return;
             if(paid < total) return alert("Payment is short!");
             
-            logActivity(`Sale Confirmed: ${cart.length} items (Total: ₱${total.toFixed(2)})`);
+            // --- 🛒 IMPROVED LOGGING START ---
+            // Create a detailed string: "Milo x2, Bread x1 (Total: ₱150.00)"
+            const itemDetails = cart.map(c => `${c.name} x${c.buyQty}`).join(', ');
+            logActivity(`Sale: ${itemDetails} (Total: ₱${total.toFixed(2)})`);
+            // --- 🛒 IMPROVED LOGGING END ---
             
             cart.forEach(c => {
                 const item = inventory[c.idx];
