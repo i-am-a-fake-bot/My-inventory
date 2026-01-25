@@ -553,10 +553,18 @@
             const btn = document.getElementById('cloudBtn');
             btn.classList.add('syncing');
             try {
-                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
-                    headers: { 'Authorization': `Bearer ${config.token}` }
+                const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json?t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${config.token}`, 'If-None-Match': '' }
                 });
                 const file = await res.json();
+                const cloudData = JSON.parse(decodeURIComponent(escape(atob(file.content))));
+                if (cloudData.salesHistory && cloudData.salesHistory.length > salesHistory.length) {
+                    alert("⚠️ Another device has newer sales! Refreshing your data first.");
+                    await fetchData();
+                    btn.classList.remove('syncing');
+                    return;
+                }
+                
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify({ inventory, salesHistory, activityLogs }))));
                 const update = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
                     method: 'PUT',
