@@ -31,8 +31,10 @@
         .view { display: none; padding: 15px; }
         .view.active { display: block; }
 
-        #list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-        .card { background: white; border-radius: 12px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; position: relative; transition: 0.2s; }
+        #list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .card { background: white; border-radius: 12px; display: flex; flex-direction: column; border: 1px solid #eee; overflow: hidden; position: relative; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        .card:active { transform: scale(0.98); background: #fdfdfd; }
         
         /* 1d. Stock Alert Colors */
         .card.low-stock { background: #fff3cd !important; border-color: #ffeeba; }
@@ -46,12 +48,12 @@
         }
         .card.out-of-stock .sold-out-badge { display: block; }
 
-        .card-header { padding: 10px; font-weight: bold; background: rgba(0,0,0,0.03); text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .card-body { padding: 12px; flex-grow: 1; text-align: center; }
-        .price-tag { font-size: 1.2em; font-weight: 800; color: var(--success); display: block; }
+        .card-header { padding: 8px 5px; font-weight: bold; background: rgba(0,0,0,0.03); text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 0.85em; min-height: 40px; display: flex; align-items: center; justify-content: center; }
+        .card-body { padding: 10px 5px; flex-grow: 1; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .price-tag { font-size: 1.1em; font-weight: 800; color: var(--success); display: block; }
         
-        .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px; background: rgba(0,0,0,0.05); }
-        .act-btn { padding: 8px 2px; border: none; border-radius: 4px; font-size: 0.7em; font-weight: bold; color: white; cursor: pointer; }
+        .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px; background: rgba(0,0,0,0.05); }
+        .act-btn { padding: 10px 2px; border: none; border-radius: 4px; font-size: 0.65em; font-weight: bold; color: white; cursor: pointer; text-transform: uppercase; letter-spacing: 0.3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         .pos-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; }
         @media (max-width: 768px) { .pos-grid { grid-template-columns: 1fr; } }
