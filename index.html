@@ -422,6 +422,12 @@
                     date: new Date().toISOString() 
                 });
                 item.qty -= c.buyQty;
+                // --- 🚩 NEW: Automatic Low Stock Alerts ---
+                if (item.qty <= 0) {
+                    logActivity(`🚨 SOLD OUT: ${item.name} is out of stock!`);
+                } else if (item.qty <= 3) {
+                    logActivity(`⚠️ LOW STOCK: ${item.name} only has ${item.qty} left.`);
+                }                
             });
             
             isDirty = true;
