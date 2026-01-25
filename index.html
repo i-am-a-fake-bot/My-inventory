@@ -456,7 +456,9 @@
             
             // 🔹 Save updated inventory & salesHistory for offline mode
             localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory, activityLogs }));
-
+            
+            renderLogs();
+            
             render(); renderPOS(); renderCart(); 
             alert("Sale Completed!");
         }
