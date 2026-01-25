@@ -172,15 +172,20 @@
                         </div>
                     </div>
         
-                    <div class="rec-note" style="grid-column: span 2; display: flex; align-items: center; justify-content: space-between; gap: 5px; background: #e9ecef; padding: 8px 10px; border-radius: 8px; margin: 10px 0;">
-                        <div style="font-size: 0.82em; color: #444;">
-                            Markup: <input type="number" id="markup" value="12" oninput="calcRec()" 
-                                style="width: 35px; padding: 2px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 0.9em; height: auto;"> %
+                    <div class="rec-note" style="grid-column: span 2; display: flex; align-items: center; justify-content: flex-start; gap: 15px; background: #e9ecef; padding: 8px 10px; border-radius: 8px; margin: 10px 0;">
+                        
+                        <div style="font-size: 0.82em; color: #444; display: flex; align-items: center; gap: 4px;">
+                            Markup: 
+                            <input type="number" id="markup" value="12" oninput="calcRec()" 
+                                style="width: 38px; padding: 2px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 0.95em; height: 22px;">
+                            %
                         </div>
+                    
                         <div style="font-size: 0.82em; color: #444;">
-                            Rec: <b id="recVal" style="color: var(--dark);">₱0.00</b>
+                            Recommended Price: <b id="recVal" style="color: var(--dark);">₱0.00</b>
                         </div>
-                        <button class="use-btn" onclick="useRec()" style="padding: 4px 8px; font-size: 0.75em; border-radius: 4px;">💡 USE</button>
+                    
+                        <button class="use-btn" onclick="useRec()" style="padding: 4px 10px; font-size: 0.75em; border-radius: 4px; cursor: pointer; margin-left: auto;">💡 USE</button>
                     </div>
                 </div> <div style="display:flex; gap:8px; margin-top:5px;">
                     <button onclick="addItem()" id="mainBtn" style="flex:2; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">SAVE PRODUCT</button>
