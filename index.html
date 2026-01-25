@@ -146,50 +146,42 @@
             <div id="formSection" style="background:white; padding:15px; border-radius:12px; margin-bottom:20px; border: 1px solid #ddd;">
                 <h3 id="formTitle" style="margin:0 0 10px 0; font-size: 1em;">Add New Product</h3>
                 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0 8px;">
-                    <div class="field-group" style="grid-column: span 2;">
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
+                    
+                    <div class="field-group" style="grid-column: span 4;">
                         <label>Product Name</label>
                         <input type="text" id="name" placeholder="e.g. Milo 22g">
                     </div>
+            
                     <div class="field-group">
-                        <label>Supplier Cost</label>
-                        <div class="input-wrapper">
-                            <input type="number" step="0.01" id="cost" placeholder="0.00" oninput="calcRec()">
-                        </div>
+                        <label style="font-size: 0.75em; white-space: nowrap;">Cost</label>
+                        <input type="number" step="0.01" id="cost" placeholder="0.00" oninput="calcRec()" style="padding: 8px 4px;">
                     </div>
                     <div class="field-group">
-                        <label>Units in Pack</label>
-                        <input type="number" id="qtyInitial" placeholder="e.g. 12" oninput="calcRec()">
+                        <label style="font-size: 0.75em; white-space: nowrap;">Pack</label>
+                        <input type="number" id="qtyInitial" placeholder="12" oninput="calcRec()" style="padding: 8px 4px;">
                     </div>
                     <div class="field-group">
-                        <label>Current Stock</label>
-                        <input type="number" id="qty" placeholder="e.g. 12">
+                        <label style="font-size: 0.75em; white-space: nowrap;">Stock</label>
+                        <input type="number" id="qty" placeholder="12" style="padding: 8px 4px;">
                     </div>
                     <div class="field-group">
-                        <label>Price (SRP)</label>
-                        <div class="input-wrapper">
-                            <input type="number" step="0.01" id="sell" placeholder="0.00">
-                        </div>
+                        <label style="font-size: 0.75em; white-space: nowrap;">SRP</label>
+                        <input type="number" step="0.01" id="sell" placeholder="0.00" style="padding: 8px 4px;">
                     </div>
-        
-                    <div class="rec-note" style="grid-column: span 2; display: flex; align-items: center; gap: 10px; background: #e9ecef; padding: 6px 10px; border-radius: 8px; margin: 10px 0; width: fit-content;">
-                        
+            
+                    <div class="rec-note" style="grid-column: span 4; display: flex; align-items: center; gap: 10px; background: #e9ecef; padding: 6px 10px; border-radius: 8px; margin: 5px 0; width: fit-content;">
                         <div style="font-size: 0.82em; color: #444; display: flex; align-items: center; gap: 4px;">
-                            Markup: 
-                            <input type="number" id="markup" value="12" oninput="calcRec()" 
-                                style="width: 38px; padding: 2px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 0.95em; height: 22px;">
-                            %
+                            Markup: <input type="number" id="markup" value="12" oninput="calcRec()" style="width: 32px; padding: 2px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 0.85em;">%
                         </div>
-                    
                         <div style="font-size: 0.82em; color: #444;">
-                            Recommended Price: <b id="recVal" style="color: var(--dark);">₱0.00</b>
+                            Rec: <b id="recVal">₱0.00</b>
                         </div>
-                    
-                        <button class="use-btn" onclick="useRec()" style="padding: 4px 10px; font-size: 0.75em; border-radius: 4px; cursor: pointer;">💡 USE</button>
+                        <button class="use-btn" onclick="useRec()" style="padding: 2px 8px; font-size: 0.7em; border-radius: 4px;">💡 USE</button>
                     </div>
-                </div> <div style="display:flex; gap:8px; margin-top:5px;">
-                    <button onclick="addItem()" id="mainBtn" style="flex:1; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">SAVE PRODUCT</button>
-                    <button onclick="clearForm()" style="flex:1; padding:12px; background:#6c757d; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">CANCEL</button>
+                </div> <div style="display:flex; gap:8px; margin-top:10px;">
+                    <button onclick="addItem()" id="mainBtn" style="flex:1; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold;">SAVE</button>
+                    <button onclick="clearForm()" style="flex:1; padding:12px; background:#6c757d; color:white; border:none; border-radius:8px; font-weight:bold;">CANCEL</button>
                 </div>
             </div>
         
