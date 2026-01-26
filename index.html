@@ -364,40 +364,38 @@
                     <td style="text-align:right; padding:10px;">${formatPHP(item.sell)}</td>
                     <td style="text-align:center; padding:10px; font-weight:bold;">${item.qty}</td>
                     <td style="text-align:right; padding:10px;">
-                        <button onclick="addToCart(${idx})" ${item.qty <= 0 ? 'disabled' : ''} style="background:var(--primary); color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">+ Add</button>
+                        <button onclick="addToCart('${item.uuid}')" ${item.qty <= 0 ? 'disabled' : ''} style="background:var(--primary); color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">+ Add</button>
                     </td>
                 </tr>`;
             }).join('');
         }
 
-        function addToCart(idx) {
-            const item = inventory[idx];
-            // Change 1: Save prompt to 'raw' so we can check for letters
-            let raw = prompt(`Ilang "${item.name}" ang binibili?`, "1");
+        function addToCart(uuid) {
+			const item = inventory.find(i => i.uuid === uuid);
+			if (!item) return alert("Item not found!");
             
-            // Change 2: Handle Cancel button and Block letters/decimals
+            let raw = prompt(`Ilang "${item.name}" ang binibili?`, "1");
             if (raw === null) return;
-            if (!/^\d+$/.test(raw.trim())) {
-                return alert("❌ Numbers only please (no letters or dots).");
-            }
+            if (!/^\d+$/.test(raw.trim())) return alert("❌ Numbers only please (no letters or dots).");
 
-            // Change 3: Convert to number and run your original stock checks
             let count = parseInt(raw);
             if (count <= 0) return alert("Invalid quantity");
             if (count > item.qty) return alert(`Only ${item.qty} left in stock!`);
 
-            const inCart = cart.find(c => c.idx === idx);
-            if (inCart) {
-                if (inCart.buyQty + count <= item.qty) inCart.buyQty += count;
-                else alert("Not enough stock for that total.");
-            } else { cart.push({...item, buyQty: count, idx: idx}); }
-            
-            document.getElementById('posSearch').value = ''; 
-            document.getElementById('posSearch').focus();
+            const inCart = cart.find(c => c.uuid === uuid);
+			if (inCart) {
+				if (inCart.buyQty + count <= item.qty) inCart.buyQty += count;
+				else alert("Not enough stock for that total.");
+			} else {
+				cart.push({...item, buyQty: count});
+			}
 
-            renderCart();
-            renderPOS();
-        }
+			document.getElementById('posSearch').value = ''; 
+			document.getElementById('posSearch').focus();
+
+			renderCart();
+			renderPOS();
+		}
 
         function renderCart() {
             const list = document.getElementById('cartList');
@@ -444,7 +442,8 @@
             logActivity(`Sale Confirmed: ${itemDetails} (Total: ₱${total.toFixed(2)})`);
             
             cart.forEach(c => {
-                const item = inventory[c.idx];
+			    const item = inventory.find(i => i.uuid === c.uuid);  // find by uuid
+				if (!item) return; // safety check
                 const profitPerUnit = item.sell - (item.unitCost || 0);
                 
                 salesHistory.push({ 
@@ -615,56 +614,49 @@
             }
         }
 
-        function addItem() {
-            if(!config) { logout(); return; }
-            const n = document.getElementById('name').value;
-            const capital = parseFloat(document.getElementById('cost').value) || 0;
-            const initial = parseFloat(document.getElementById('qtyInitial').value) || 1;
-            const current = parseFloat(document.getElementById('qty').value) || 0;
-            const s = parseFloat(document.getElementById('sell').value) || 0;
-        
-            if(!n) return alert("Product name is required");
-        
-            logActivity(`Inventory Update: ${n}`);
-        
-            const obj = { 
-                name: n, 
-                cost: capital,        
-                qtyInitial: initial,  
-                qty: current,         
-                sell: s, 
-                unitCost: capital / initial
-            };
-        
-            if (editingIndex > -1) {
-                const existing = inventory[editingIndex];
-                let updateUnitCost = true;
-            
-                if (existing.cost !== capital || existing.qtyInitial !== initial) {
-                    updateUnitCost = confirm(
-                        "Supplier cost or batch size changed. Do you want to update unitCost for this product?"
-                    );
-                }
-            
-                inventory[editingIndex] = {
-                    ...existing,
-                    name: n,
-                    cost: capital,
-                    qtyInitial: initial,
-                    qty: current,
-                    sell: s,
-                    unitCost: updateUnitCost ? capital / initial : existing.unitCost
-                };
-            } else {
-                inventory.push({
-                    name: n,
-                    cost: capital,
-                    qtyInitial: initial,
-                    qty: current,
-                    sell: s,
-                    unitCost: capital / initial
-                });
-            }
+		function addItem() {
+			if(!config) { logout(); return; }
+
+			const uuid = crypto.randomUUID(); 
+			const n = document.getElementById('name').value;
+			const capital = parseFloat(document.getElementById('cost').value) || 0;
+			const initial = parseFloat(document.getElementById('qtyInitial').value) || 1;
+			const current = parseFloat(document.getElementById('qty').value) || 0;
+			const s = parseFloat(document.getElementById('sell').value) || 0;
+
+			if(!n) return alert("Product name is required");
+
+			logActivity(`Inventory Update: ${n}`);
+
+			const obj = { 
+				uuid,
+				name: n, 
+				cost: capital,        
+				qtyInitial: initial,  
+				qty: current,         
+				sell: s, 
+				unitCost: capital / initial
+			};
+
+			if (editingIndex > -1) {
+				const existing = inventory[editingIndex];            
+				let updateUnitCost = true;
+
+				if (existing.cost !== capital || existing.qtyInitial !== initial) {
+					updateUnitCost = confirm(
+						"Supplier cost or batch size changed. Do you want to update unitCost for this product?"
+					);
+				}
+
+				inventory[editingIndex] = {
+					...existing,
+					...obj,
+					uuid: existing.uuid, // ✅ Preserve the original UUID
+					unitCost: updateUnitCost ? obj.unitCost : existing.unitCost
+				};
+			} else {
+				inventory.push(obj); // ✅ New item already has UUID
+			}
 
             isDirty = true;
             
@@ -675,9 +667,11 @@
             render();
         } 
 
-        function editItem(idx) {
-            editingIndex = idx;
-            const item = inventory[idx];
+		function editItem(uuid) {
+			const idx = inventory.findIndex(i => i.uuid === uuid);
+			if(idx === -1) return alert("Item not found");
+			editingIndex = idx;
+			const item = inventory[idx];
             document.getElementById('formTitle').innerText = "Editing: " + item.name;
             document.getElementById('name').value = item.name;
             document.getElementById('cost').value = item.cost;
@@ -688,8 +682,9 @@
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        function copyItem(idx) {
-            const item = inventory[idx];
+        function copyItem(uuid) {
+			const item = inventory.find(i => i.uuid === uuid);
+			if(!item) return;
             document.getElementById('formTitle').innerText = "Copying Product";
             document.getElementById('name').value = item.name + " (Copy)";
             document.getElementById('cost').value = item.cost;
@@ -701,12 +696,13 @@
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        function deleteItem(idx) { 
+        function deleteItem(uuid) { 
+			const idx = inventory.findIndex(i => i.uuid === uuid);
+			if(idx === -1) return;
             const itemName = inventory[idx].name;
             
-            // 4. Before delete ask for the reason
-            const reason = prompt(`Reason for deleting "${itemName}"? (Required)`); 
-            
+            const reason = prompt(`Reason for deleting "${itemName}"? (Required)`);
+			            
             if (reason === null) return; 
             
             if (reason.trim() === "") {
@@ -720,18 +716,19 @@
             isDirty = true;
             
             localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory, activityLogs }));
-            localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory, activityLogs }));
             
             render(); 
         }
 
-        function restockItem(idx) { 
-                    const amt = prompt("How many units to add to current stock?"); 
+        function restockItem(uuid) { 
+					const item = inventory.find(i => i.uuid === uuid);
+					if(!item) return;                    
+					const amt = prompt("How many units to add to current stock?"); 
                     if(amt && !isNaN(amt)) { 
                         const addedQty = parseInt(amt); 
-                        inventory[idx].qty += addedQty; 
+                        item.qty += addedQty; 
                         
-                        logActivity(`Restocked: ${inventory[idx].name} (+${addedQty})`);
+                        logActivity(`Restocked: ${item.name} (+${addedQty})`);
                         
                         isDirty = true;
                         
