@@ -604,6 +604,55 @@
         // 3. Smart Sync every 5 mins
         setInterval(() => { if (config && isDirty) syncToCloud(); }, 300000);
 
+		async function resetDashboard() {
+			if(!confirm("This will reset dashboard stats and archive current cloud data. Proceed?")) return;
+			if(!config) return alert("No cloud configuration!");
+
+			// Archive current cloud data
+			try {
+				const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+					headers: { 'Authorization': `Bearer ${config.token}` }
+				});
+				if(!res.ok) throw new Error("Cannot fetch current cloud data.");
+				const file = await res.json();
+
+				const archiveName = getArchiveName();
+				await fetch(`https://api.github.com/repos/${config.repo}/contents/${archiveName}`, {
+					method: 'PUT',
+					headers: { 'Authorization': `Bearer ${config.token}` },
+					body: JSON.stringify({
+						message: `Archive data.json as ${archiveName}`,
+						content: file.content
+					})
+				});
+
+				// Overwrite data.json with empty inventory & sales
+				const emptyData = { inventory, salesHistory: [], activityLogs: [] };
+				await fetch(`https://api.github.com/repos/${config.repo}/contents/data.json`, {
+					method: 'PUT',
+					headers: { 'Authorization': `Bearer ${config.token}` },
+					body: JSON.stringify({
+						message: "Reset dashboard",
+						content: btoa(unescape(encodeURIComponent(JSON.stringify(emptyData)))),
+						sha: file.sha
+					})
+				});
+
+				// Clear local sales & logs
+				salesHistory = [];
+				activityLogs = [];
+				localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory, activityLogs }));
+
+				updateDashboard();
+				alert("Dashboard reset! Old data archived as " + archiveName);
+				render(); renderPOS(); renderLogs();
+
+			} catch(e) {
+				console.error(e);
+				alert("Failed to reset dashboard. Check connection or permissions.");
+			}
+		}
+
         function saveConfig() {
             const token = document.getElementById('ghToken').value;
             const repo = document.getElementById('ghRepo').value;
@@ -614,64 +663,6 @@
                 alert("Both fields are required.");
             }
         }
-
-		function resetDashboard() {
-			if(!confirm("This will clear all sales/profit stats but keep your inventory. Proceed?")) return;
-
-			// Clear sales history and activity logs
-			salesHistory = [];
-			activityLogs = [];
-
-			// Recalculate totals based on inventory
-			let totalCost = 0, totalSell = 0;
-			inventory.forEach(item => {
-				const unitCost = item.unitCost || (item.cost / (item.qtyInitial || 1));
-				totalCost += unitCost * item.qty;
-				totalSell += (parseFloat(item.sell) || 0) * item.qty;
-			});
-
-			// Update dashboard headers
-			document.getElementById('totalCost').innerText = formatPHP(totalCost);
-			document.getElementById('totalSell').innerText = formatPHP(totalSell);
-			document.getElementById('weeklySales').innerText = formatPHP(0);
-			document.getElementById('weeklyProfit').innerText = formatPHP(0);
-
-			// Clear localStorage sales/activity (optional)
-			const offline = JSON.parse(localStorage.getItem('offline_data')) || {};
-			offline.salesHistory = [];
-			offline.activityLogs = [];
-			localStorage.setItem('offline_data', JSON.stringify(offline));
-
-			alert("Dashboard stats reset!");
-		}function resetDashboard() {
-			if(!confirm("This will clear all sales/profit stats but keep your inventory. Proceed?")) return;
-
-			// Clear sales history and activity logs
-			salesHistory = [];
-			activityLogs = [];
-
-			// Recalculate totals based on inventory
-			let totalCost = 0, totalSell = 0;
-			inventory.forEach(item => {
-				const unitCost = item.unitCost || (item.cost / (item.qtyInitial || 1));
-				totalCost += unitCost * item.qty;
-				totalSell += (parseFloat(item.sell) || 0) * item.qty;
-			});
-
-			// Update dashboard headers
-			document.getElementById('totalCost').innerText = formatPHP(totalCost);
-			document.getElementById('totalSell').innerText = formatPHP(totalSell);
-			document.getElementById('weeklySales').innerText = formatPHP(0);
-			document.getElementById('weeklyProfit').innerText = formatPHP(0);
-
-			// Clear localStorage sales/activity (optional)
-			const offline = JSON.parse(localStorage.getItem('offline_data')) || {};
-			offline.salesHistory = [];
-			offline.activityLogs = [];
-			localStorage.setItem('offline_data', JSON.stringify(offline));
-
-			alert("Dashboard stats reset!");
-		}
 
 
         function logout() {
@@ -814,6 +805,13 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.log("SW failed", err));
         }
+
+		function getArchiveName() {
+			const now = new Date();
+			const timestamp = now.toISOString().replace(/[:.]/g,'-'); // e.g. 2026-03-03T15-20-30-123Z
+			return `data.json.${timestamp}`;
+		}		
+		
     </script>
 </body>
 </html>
