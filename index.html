@@ -101,6 +101,30 @@
         
         .rec-note { font-size: 0.7em; background: #e9ecef; padding: 5px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 10px;}
         .use-btn { background: var(--primary); color: white; border: none; border-radius: 4px; padding: 2px 6px; font-size: 0.8em; cursor: pointer; font-weight: bold; }
+
+		.category-header {
+			font-weight: bold;
+			font-size: 1.1em;
+			margin: 10px 0;
+			cursor: pointer;
+			user-select: none;
+		}
+		.category-header .toggle {
+			display: inline-block;
+			width: 20px;
+			text-align: center;
+			margin-right: 5px;
+		}
+		.category-cards.hidden {
+			display: none;
+		}
+		.category-cards {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			margin-bottom: 10px;
+		}
+
     </style>
 </head>
 <body>
@@ -246,6 +270,8 @@
         </div>
     </div>
 
+	<div id="inventory-container"></div>
+
     <script>
         let inventory = [];
         let salesHistory = [];
@@ -318,49 +344,83 @@
             document.getElementById('recVal').innerText = "₱0.00";
         }
 
-        function render() {
-            const listDiv = document.getElementById('list');
-            const search = document.getElementById('searchBar').value.toLowerCase();
-            let sumCost = 0; let sumSell = 0;
+		function render() {
+			const listDiv = document.getElementById('list');
+			const search = document.getElementById('searchBar').value.toLowerCase();
+			let sumCost = 0;
+			let sumSell = 0;
 
-            inventory.forEach(item => {
-                sumCost += (item.unitCost || 0) * (item.qty || 0);
-                sumSell += (parseFloat(item.sell) * item.qty) || 0;
-            });
+			inventory.forEach(item => {
+				sumCost += (item.unitCost || 0) * (item.qty || 0);
+				sumSell += (parseFloat(item.sell) * item.qty) || 0;
+			});
 
-            document.getElementById('totalCost').innerText = formatPHP(sumCost);
-            document.getElementById('totalSell').innerText = formatPHP(sumSell);
+			document.getElementById('totalCost').innerText = formatPHP(sumCost);
+			document.getElementById('totalSell').innerText = formatPHP(sumSell);
 
+			// sort alphabetically
 			inventory.sort((a, b) => a.name.localeCompare(b.name));
 
-            const filtered = inventory.filter(i => i.name.toLowerCase().includes(search));
-            listDiv.innerHTML = filtered.map((item) => {
-                const actualIdx = inventory.indexOf(item);
-                const unitCost = item.unitCost || (item.cost / (item.qtyInitial || 1));
-                const isLow = item.qty > 0 && item.qty <= 3;
-                const isOut = item.qty <= 0;
+			// group by category
+			const grouped = {};
+			inventory.forEach(item => {
+				const category = item.category || 'Uncategorized';
+				if (!grouped[category]) grouped[category] = [];
+				grouped[category].push(item);
+			});
 
-                const displayQty = Math.max(0, item.qty);
+			listDiv.innerHTML = '';
 
-                return `
-                <div class="card ${isLow ? 'low-stock' : ''} ${isOut ? 'out-of-stock' : ''}">
-                    <div class="sold-out-badge">SOLD OUT</div>
-                    <div class="card-header">${item.name}</div>
-                    <div class="card-body">
-                        <span class="price-tag">${formatPHP(item.sell)}</span>
-                        <div style="font-size:0.75em; color:#666; margin-bottom:4px;">Profit: <span style="color:var(--success)">+${(item.sell - unitCost).toFixed(2)}</span></div>
-                        <div style="font-weight:bold; font-size: 0.9em;">Stock: ${item.qty}</div>
-                    </div>
-                    <div class="card-actions">
-                        <button class="act-btn" style="background:var(--info)" onclick="restockItem(${actualIdx})">Restock</button>
-                        <button class="act-btn" style="background:var(--warning); color:black" onclick="editItem(${actualIdx})">Edit</button>
-                        <button class="act-btn" style="background:var(--primary)" onclick="copyItem(${actualIdx})">Copy</button>
-                        <button class="act-btn" style="background:var(--danger)" onclick="deleteItem(${actualIdx})">Delete</button>
-                    </div>
-                </div>`;
-            }).join('');
-            updateDashboard();
-        }
+			for (const category in grouped) {
+
+				const items = grouped[category].filter(i =>
+					i.name.toLowerCase().includes(search)
+				);
+
+				if (items.length === 0) continue;
+
+				const catDiv = document.createElement('div');
+				catDiv.className = 'category';
+
+				catDiv.innerHTML = `
+				<div class="category-header" onclick="toggleCategory(this)">
+					<span class="toggle">−</span> ${category}
+				</div>
+				<div class="category-cards">
+					${items.map(item => {
+
+						const actualIdx = inventory.indexOf(item);
+						const unitCost = item.unitCost || (item.cost / (item.qtyInitial || 1));
+						const isLow = item.qty > 0 && item.qty <= 3;
+						const isOut = item.qty <= 0;
+
+						return `
+						<div class="card ${isLow ? 'low-stock' : ''} ${isOut ? 'out-of-stock' : ''}">
+							<div class="sold-out-badge">SOLD OUT</div>
+							<div class="card-header">${item.name}</div>
+							<div class="card-body">
+								<span class="price-tag">${formatPHP(item.sell)}</span>
+								<div style="font-size:0.75em;color:#666;margin-bottom:4px;">
+								Profit: <span style="color:var(--success)">+${(item.sell - unitCost).toFixed(2)}</span>
+								</div>
+								<div style="font-weight:bold;font-size:0.9em;">Stock: ${item.qty}</div>
+							</div>
+							<div class="card-actions">
+								<button class="act-btn" style="background:var(--info)" onclick="restockItem(${actualIdx})">Restock</button>
+								<button class="act-btn" style="background:var(--warning);color:black" onclick="editItem(${actualIdx})">Edit</button>
+								<button class="act-btn" style="background:var(--primary)" onclick="copyItem(${actualIdx})">Copy</button>
+								<button class="act-btn" style="background:var(--danger)" onclick="deleteItem(${actualIdx})">Delete</button>
+							</div>
+						</div>`;
+					}).join('')}
+				</div>
+				`;
+
+				listDiv.appendChild(catDiv);
+			}
+
+			updateDashboard();
+		}
 
         function renderPOS() {
             const search = document.getElementById('posSearch').value.toLowerCase();
@@ -378,6 +438,14 @@
                 </tr>`;
             }).join('');
         }
+
+		function toggleCategory(header) {
+			const cards = header.nextElementSibling;
+			const icon = header.querySelector('.toggle');
+
+			cards.classList.toggle('hidden');
+			icon.textContent = cards.classList.contains('hidden') ? '+' : '−';
+		}
 
         function addToCart(idx) {
             const item = inventory[idx];
