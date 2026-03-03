@@ -119,10 +119,9 @@
 			display: none;
 		}
 		.category-cards {
-			display: flex;
-			flex-wrap: wrap;
+			display: grid;
+			fgrid-template-columns: inherit;
 			gap: 10px;
-			margin-bottom: 10px;
 		}
 
     </style>
@@ -195,6 +194,15 @@
                     <div class="field-group" style="grid-column: span 4;">
                         <label>Product Name</label>
                         <input type="text" id="name" placeholder="e.g. Milo 22g">
+						<label>Category</label>
+						<select id="category">
+							<option value="Drinks">Drinks</option>
+							<option value="Snacks">Snacks / Food</option>
+							<option value="Cigarettes">Cigarettes</option>
+							<option value="Household">Laundry / Household</option>
+							<option value="Toiletries">Toiletries</option>
+							<option value="Other">Other</option>
+						</select>
                     </div>
             
                     <div class="field-group">
@@ -340,7 +348,8 @@
         function clearForm() {
             editingIndex = -1;
             document.getElementById('formTitle').innerText = "Add New Product";
-            ['name','cost','qty','qtyInitial','sell'].forEach(id => document.getElementById(id).value = '');
+            ['name','cost','qty','qtyInitial','sell','category'].forEach(id => document.getElementById(id).value = '');
+			document.getElementById('category').value = "Other";
             document.getElementById('recVal').innerText = "₱0.00";
         }
 
@@ -745,6 +754,7 @@
         function addItem() {
             if(!config) { logout(); return; }
             const n = document.getElementById('name').value;
+			const cat = document.getElementById('category').value;
             const capital = parseFloat(document.getElementById('cost').value) || 0;
             const initial = parseFloat(document.getElementById('qtyInitial').value) || 1;
             const current = parseFloat(document.getElementById('qty').value) || 0;
@@ -756,11 +766,12 @@
         
             const obj = { 
                 name: n, 
+				category: cat,
                 cost: capital,        
                 qtyInitial: initial,  
                 qty: current,         
                 sell: s, 
-                unitCost: capital / initial
+                unitCost: capital / initial : 0
             };
         
             if (editingIndex > -1) {
@@ -807,6 +818,7 @@
             const item = inventory[idx];
             document.getElementById('formTitle').innerText = "Editing: " + item.name;
             document.getElementById('name').value = item.name;
+			document.getElementById('category').value = inventory[index].category || "Other";
             document.getElementById('cost').value = item.cost;
             document.getElementById('qtyInitial').value = item.qtyInitial || 1;
             document.getElementById('qty').value = item.qty;
