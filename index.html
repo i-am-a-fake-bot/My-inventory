@@ -618,11 +618,14 @@
 		function resetDashboard() {
 			if(!confirm("This will clear all sales/profit stats but keep your inventory. Proceed?")) return;
 
-			// Clear sales history and activity logs
+			// 1️⃣ Backup old sales first
+			backupSalesHistory();
+
+			// 2️⃣ Clear current sales & logs
 			salesHistory = [];
 			activityLogs = [];
 
-			// Recalculate totals based on inventory
+			// 3️⃣ Recalculate totals based on inventory
 			let totalCost = 0, totalSell = 0;
 			inventory.forEach(item => {
 				const unitCost = item.unitCost || (item.cost / (item.qtyInitial || 1));
@@ -630,47 +633,22 @@
 				totalSell += (parseFloat(item.sell) || 0) * item.qty;
 			});
 
-			// Update dashboard headers
+			// 4️⃣ Update dashboard headers
 			document.getElementById('totalCost').innerText = formatPHP(totalCost);
 			document.getElementById('totalSell').innerText = formatPHP(totalSell);
 			document.getElementById('weeklySales').innerText = formatPHP(0);
 			document.getElementById('weeklyProfit').innerText = formatPHP(0);
 
-			// Clear localStorage sales/activity (optional)
+			// 5️⃣ Save fresh offline data
 			const offline = JSON.parse(localStorage.getItem('offline_data')) || {};
 			offline.salesHistory = [];
 			offline.activityLogs = [];
 			localStorage.setItem('offline_data', JSON.stringify(offline));
 
-			alert("Dashboard stats reset!");
-		}function resetDashboard() {
-			if(!confirm("This will clear all sales/profit stats but keep your inventory. Proceed?")) return;
+			// 6️⃣ Sync fresh data to cloud
+			syncToCloud();
 
-			// Clear sales history and activity logs
-			salesHistory = [];
-			activityLogs = [];
-
-			// Recalculate totals based on inventory
-			let totalCost = 0, totalSell = 0;
-			inventory.forEach(item => {
-				const unitCost = item.unitCost || (item.cost / (item.qtyInitial || 1));
-				totalCost += unitCost * item.qty;
-				totalSell += (parseFloat(item.sell) || 0) * item.qty;
-			});
-
-			// Update dashboard headers
-			document.getElementById('totalCost').innerText = formatPHP(totalCost);
-			document.getElementById('totalSell').innerText = formatPHP(totalSell);
-			document.getElementById('weeklySales').innerText = formatPHP(0);
-			document.getElementById('weeklyProfit').innerText = formatPHP(0);
-
-			// Clear localStorage sales/activity (optional)
-			const offline = JSON.parse(localStorage.getItem('offline_data')) || {};
-			offline.salesHistory = [];
-			offline.activityLogs = [];
-			localStorage.setItem('offline_data', JSON.stringify(offline));
-
-			alert("Dashboard stats reset!");
+			alert("Dashboard reset! Previous sales history is safely backed up.");
 		}
 
 
@@ -814,6 +792,35 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.log("SW failed", err));
         }
+		
+		function backupSalesHistory() {
+			const timestamp = new Date().toISOString().replace(/[:.]/g,'-'); // safe filename
+			const backupData = {
+				inventory, // optional
+				salesHistory,
+				activityLogs
+			};
+
+			// Save to localStorage (you can also push to cloud if you want)
+			localStorage.setItem(`backup_${timestamp}`, JSON.stringify(backupData));
+
+			// Optional: push backup to cloud
+			// You could create data-backup_TIMESTAMP.json file on GitHub
+			console.log(`Backup created: backup_${timestamp}`);
+		}		
+
+		function backupSalesHistory() {
+			const timestamp = new Date().toISOString().replace(/[:.]/g,'-'); // safe filename
+			const backupData = {
+				inventory,   // optional, you can include if you want full snapshot
+				salesHistory,
+				activityLogs
+			};
+			localStorage.setItem(`backup_${timestamp}`, JSON.stringify(backupData));
+			console.log(`Backup created: backup_${timestamp}`);
+		}
+
+		
     </script>
 </body>
 </html>
