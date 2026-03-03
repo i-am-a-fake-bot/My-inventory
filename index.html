@@ -331,6 +331,8 @@
             document.getElementById('totalCost').innerText = formatPHP(sumCost);
             document.getElementById('totalSell').innerText = formatPHP(sumSell);
 
+			inventory.sort((a, b) => a.name.localeCompare(b.name));
+
             const filtered = inventory.filter(i => i.name.toLowerCase().includes(search));
             listDiv.innerHTML = filtered.map((item) => {
                 const actualIdx = inventory.indexOf(item);
