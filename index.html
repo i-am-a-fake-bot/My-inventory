@@ -615,6 +615,113 @@
             }
         }
 
+		async function resetDashboard() {
+			if(!confirm("This will clear all sales/profit stats but keep your inventory. Proceed?")) return;
+
+			// 1️⃣ Backup old sales first
+			const timestamp = new Date().toISOString().replace(/[:.]/g, "-"); // e.g., 2026-03-03T12-30-45-123Z
+			const backupFileName = `backup_sales_${timestamp}.json`;
+			await saveToCloud(backupFileName, { inventory, salesHistory, activityLogs }, `Backup before reset (${timestamp})`);
+
+			// 2️⃣ Clear current sales & logs
+			salesHistory = [];
+			activityLogs = [];
+
+			// 3️⃣ Update dashboard totals
+			document.getElementById('weeklySales').innerText = formatPHP(0);
+			document.getElementById('weeklyProfit').innerText = formatPHP(0);
+
+			// 4️⃣ Save fresh offline data
+			const offline = JSON.parse(localStorage.getItem('offline_data')) || {};
+			offline.salesHistory = [];
+			offline.activityLogs = [];
+			localStorage.setItem('offline_data', JSON.stringify(offline));
+
+			// 5️⃣ Save new main data.json
+			await saveToCloud('data.json', { inventory, salesHistory, activityLogs }, "Reset dashboard - new file");
+
+			alert("Dashboard reset! Previous sales history is safely backed up.");
+		}
+
+		async function saveToCloud(fileName, contentObj, commitMsg) {
+			if(!config) { logout(); return; }
+
+			try {
+				// 1️⃣ Get existing file sha if it exists
+				const res = await fetch(`https://api.github.com/repos/${config.repo}/contents/${fileName}?t=${Date.now()}`, {
+					headers: { 'Authorization': `Bearer ${config.token}` }
+				});
+				let sha = null;
+				if(res.ok) {
+					const file = await res.json();
+					sha = file.sha;
+				}
+
+				// 2️⃣ Save / update file
+				const content = btoa(unescape(encodeURIComponent(JSON.stringify(contentObj))));
+				await fetch(`https://api.github.com/repos/${config.repo}/contents/${fileName}`, {
+					method: 'PUT',
+					headers: { 'Authorization': `Bearer ${config.token}` },
+					body: JSON.stringify({ message: commitMsg, content, sha })
+				});
+
+			} catch(e) { 
+				console.error("Cloud save failed:", e); 
+				alert("Failed to save data to cloud. Check connection.");
+			}
+		}
+
+		async function fetchLatestData() {
+			if (!config) return;
+
+			try {
+				const res = await fetch(`https://api.github.com/repos/${config.repo}/contents?ref=main`, {
+					headers: { 'Authorization': `Bearer ${config.token}` }
+				});
+				if (!res.ok) throw new Error("Fetch failed");
+
+				const files = await res.json();
+				const dataFiles = files.filter(f => f.name === 'data.json' || f.name.startsWith('backup_sales_'));
+
+				let latestFile = dataFiles.find(f => f.name === 'data.json');
+
+				if (!latestFile && dataFiles.length > 0) {
+					const timestampRegex = /\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d+Z/;
+					latestFile = dataFiles
+						.sort((a, b) => {
+							const aTime = a.name.match(timestampRegex)?.[0];
+							const bTime = b.name.match(timestampRegex)?.[0];
+							return new Date(bTime) - new Date(aTime);
+						})[0];
+				}
+
+				if (latestFile?.download_url) {
+					const fileRes = await fetch(latestFile.download_url);
+					const content = await fileRes.json();
+					inventory = content.inventory || [];
+					salesHistory = content.salesHistory || [];
+					activityLogs = content.activityLogs || [];
+
+					localStorage.setItem('offline_data', JSON.stringify({ inventory, salesHistory, activityLogs }));
+					document.getElementById('syncStatus').innerText = "Cloud Synced: " + new Date().toLocaleTimeString();
+				}
+
+			} catch (e) {
+				console.warn("Offline mode: using localStorage");
+				const offline = JSON.parse(localStorage.getItem('offline_data'));
+				if (offline) {
+					inventory = offline.inventory || [];
+					salesHistory = offline.salesHistory || [];
+					activityLogs = offline.activityLogs || [];
+					document.getElementById('syncStatus').innerText = "Offline Mode";
+				}
+			}
+
+			render();
+			renderPOS();
+		}
+
+
 		function resetDashboard() {
 			if(!confirm("This will clear all sales/profit stats but keep your inventory. Proceed?")) return;
 
@@ -648,7 +755,14 @@
 			// 6️⃣ Sync fresh data to cloud
 			syncToCloud();
 
+			await saveToCloud('data.json', { inventory, salesHistory, activityLogs }, "Reset dashboard - new file");
+
+			// Immediately fetch the latest to sync local SHA
+			await fetchData();
+
 			alert("Dashboard reset! Previous sales history is safely backed up.");
+			
+		isDirty = false;
 		}
 
 
@@ -792,35 +906,7 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.log("SW failed", err));
         }
-		
-		function backupSalesHistory() {
-			const timestamp = new Date().toISOString().replace(/[:.]/g,'-'); // safe filename
-			const backupData = {
-				inventory, // optional
-				salesHistory,
-				activityLogs
-			};
-
-			// Save to localStorage (you can also push to cloud if you want)
-			localStorage.setItem(`backup_${timestamp}`, JSON.stringify(backupData));
-
-			// Optional: push backup to cloud
-			// You could create data-backup_TIMESTAMP.json file on GitHub
-			console.log(`Backup created: backup_${timestamp}`);
-		}		
-
-		function backupSalesHistory() {
-			const timestamp = new Date().toISOString().replace(/[:.]/g,'-'); // safe filename
-			const backupData = {
-				inventory,   // optional, you can include if you want full snapshot
-				salesHistory,
-				activityLogs
-			};
-			localStorage.setItem(`backup_${timestamp}`, JSON.stringify(backupData));
-			console.log(`Backup created: backup_${timestamp}`);
-		}
-
-		
+				
     </script>
 </body>
 </html>
