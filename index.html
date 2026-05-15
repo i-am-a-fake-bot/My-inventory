@@ -565,11 +565,7 @@
                 });
                 if(res.ok) {
                     const file = await res.json();
-					const content = JSON.parse(
-						new TextDecoder().decode(
-							Uint8Array.from(atob(file.content), c => c.charCodeAt(0))
-						)
-					);
+                    const content = JSON.parse(decodeURIComponent(escape(atob(file.content))));
                     inventory = content.inventory || [];
                     salesHistory = content.salesHistory || [];
                     activityLogs = content.activityLogs || [];
